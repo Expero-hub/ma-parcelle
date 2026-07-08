@@ -1,0 +1,87 @@
+/// Compagnie (niveau le plus haut de la hiérarchie organisationnelle).
+model Company {
+  id       String    @id @default(cuid())
+  name     String
+  address  String?
+  phone    String?
+  active   Boolean   @default(true)
+  agencies Agency[]
+  users    User[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@map("companies")
+}
+
+/// Agence rattachée à une compagnie. Unité principale de scoping du staff.
+/// (Amélioration : ajout de companyId, absent du modèle brut.)
+model Agency {
+  id           String         @id @default(cuid())
+  name         String
+  phone        String?
+  address      String?
+  companyId    String         @map("company_id")
+  company      Company        @relation(fields: [companyId], references: [id])
+  active       Boolean        @default(true)
+  pointsOfSale PointOfSale[]
+  members      AgencyMember[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([companyId])
+  @@map("agencies")
+}
+
+/// Point de vente rattaché à une agence. Second niveau de scoping.
+model PointOfSale {
+  id       String  @id @default(cuid())
+  agencyId String  @map("agency_id")
+  agency   Agency  @relation(fields: [agencyId], references: [id])
+  name     String
+  address  String?
+  phone    String?
+  active   Boolean @default(true)
+  members  PointOfSaleMember[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([agencyId])
+  @@map("points_of_sale")
+}
+
+/// Appartenance d'un utilisateur à une agence (M:N). Définit son périmètre.
+model AgencyMember {
+  id       String @id @default(cuid())
+  userId   String @map("user_id")
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agencyId String @map("agency_id")
+  agency   Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, agencyId])
+  @@index([agencyId])
+  @@map("agency_members")
+}
+
+/// Appartenance d'un utilisateur à un point de vente (M:N).
+model PointOfSaleMember {
+  id            String      @id @default(cuid())
+  userId        String      @map("user_id")
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pointOfSaleId String      @map("point_of_sale_id")
+  pointOfSale   PointOfSale @relation(fields: [pointOfSaleId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, pointOfSaleId])
+  @@index([pointOfSaleId])
+  @@map("point_of_sale_members")
+}
