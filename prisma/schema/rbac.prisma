@@ -1,0 +1,103 @@
+enum ProfileType {
+  ADMIN
+  CLIENT
+  STAFF
+}
+
+/// Profil = rôle d'un utilisateur. ADMIN et CLIENT sont des profils système
+/// non supprimables. Les profils STAFF (gérant, gestionnaire, agent…) sont créés
+/// librement et reçoivent des permissions via ProfilePermission.
+model Profile {
+  id          String      @id @default(cuid())
+  name        String
+  type        ProfileType
+  description String?
+  active      Boolean     @default(true)
+  isSystem    Boolean     @default(false)
+
+  users       User[]
+  permissions ProfilePermission[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([type])
+  @@map("profiles")
+}
+
+/// Regroupement logique de menus du dashboard (ex. "Administration", "Métier").
+model Module {
+  id     String  @id @default(cuid())
+  name   String
+  order  Int     @default(0)
+  active Boolean @default(true)
+  menus  Menu[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("modules")
+}
+
+/// Entrée de menu du dashboard, rattachée à un module. Peut avoir des sous-menus.
+model Menu {
+  id          String    @id @default(cuid())
+  name        String
+  moduleId    String    @map("module_id")
+  module      Module    @relation(fields: [moduleId], references: [id])
+  icon        String?
+  url         String?
+  order       Int       @default(0)
+  active      Boolean   @default(true)
+  submenus    SubMenu[]
+  permissions ProfilePermission[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([moduleId])
+  @@map("menus")
+}
+
+/// Sous-menu d'un menu.
+model SubMenu {
+  id          String  @id @default(cuid())
+  menuId      String  @map("menu_id")
+  menu        Menu    @relation(fields: [menuId], references: [id])
+  name        String
+  url         String?
+  order       Int     @default(0)
+  active      Boolean @default(true)
+  permissions ProfilePermission[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([menuId])
+  @@map("submenus")
+}
+
+/// Permission CRUD d'un profil sur un menu (ou sous-menu). C'est ici que se joue
+/// "qui peut créer/voir/modifier/supprimer quoi" — y compris "qui peut créer des users".
+model ProfilePermission {
+  id        String   @id @default(cuid())
+  profileId String   @map("profile_id")
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  menuId    String   @map("menu_id")
+  menu      Menu     @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  submenuId String?  @map("submenu_id")
+  submenu   SubMenu? @relation(fields: [submenuId], references: [id], onDelete: Cascade)
+
+  canCreate Boolean @default(false)
+  canRead   Boolean @default(false)
+  canUpdate Boolean @default(false)
+  canDelete Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([profileId, menuId, submenuId])
+  @@index([profileId])
+  @@map("profile_permissions")
+}
