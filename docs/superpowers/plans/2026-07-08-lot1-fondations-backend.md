@@ -127,11 +127,10 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
 }
 ```
+> Prisma 7.8 **n'accepte plus** `url`/`directUrl` dans le bloc `datasource` du schéma (erreur P1012). L'URL est fournie via `prisma.config.ts` (Step 2). Le runtime utilise l'adaptateur pg avec `DATABASE_URL`.
 
 - [ ] **Step 2: Créer `prisma.config.ts`**
 
@@ -142,11 +141,15 @@ import { defineConfig } from "prisma/config";
 
 export default defineConfig({
   schema: path.join("prisma", "schema"),
+  datasource: {
+    url: process.env.DIRECT_URL,   // connexion directe pour les migrations Prisma CLI
+  },
   migrations: {
     seed: "tsx prisma/seed.ts",
   },
 });
 ```
+> En Prisma 7, l'URL de la datasource se déclare ici (pas dans le schéma). On y met `DIRECT_URL` : les migrations passent par la connexion directe. Le runtime applicatif, lui, utilise l'adaptateur pg avec `DATABASE_URL` (pooled) dans `src/lib/prisma.ts`.
 
 - [ ] **Step 3: Commit**
 
@@ -861,7 +864,7 @@ Expected: `Generated Prisma Client` dans `src/generated/prisma`. Le dossier `src
 - [ ] **Step 3: Créer le singleton `src/lib/prisma.ts`**
 
 ```ts
-import { PrismaClient } from "@/generated/prisma";
+import { PrismaClient } from "@/generated/prisma/client";  // generator prisma-client → point d'entrée client.ts (pas de barrel index)
 import { PrismaPg } from "@prisma/adapter-pg";
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
