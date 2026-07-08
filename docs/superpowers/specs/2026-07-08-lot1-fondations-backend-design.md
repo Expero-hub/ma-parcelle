@@ -70,7 +70,7 @@ ma_parcelle/
     schema/                   # Schéma multi-fichiers
       schema.prisma           # datasource + generator UNIQUEMENT
       auth.prisma             # User, Session, Account, Verification (Better Auth)
-      rbac.prisma             # Profile, Module, Menu, SubMenu, ProfilePermission
+      rbac.prisma             # Profile, Module, Menu (hiérarchique), ProfilePermission
       org.prisma              # Company, Agency, PointOfSale, AgencyMember, PointOfSaleMember
       catalog.prisma          # Zone, Parcelle, ParcelleImage
       sales.prisma            # Contract, Reservation, Cancellation, Installment, Payment
@@ -151,7 +151,7 @@ SEED_ADMIN_PASSWORD=""                       # mot de passe fort ; changez-le ap
 - **Better Auth** lit/écrit `user/session/account/verification` via l'adapter Prisma. Les champs custom du `User` (nos `firstName`, `profileId`, `companyId`…) sont déclarés en `additionalFields` dans la config Better Auth (Lot 2) et présents comme colonnes dans le schéma.
 - **Deux couches d'autorisation :**
   1. **Better Auth `role`** (grossier) — porte d'entrée du plugin `admin` : qui peut appeler `createUser`, `banUser`, gérer les sessions. `role = "admin"` pour les profils ADMIN.
-  2. **RBAC Profile → Module/Menu/SubMenu/ProfilePermission + scoping** (fin) — gouverne l'accès aux menus du dashboard, **revérifié côté serveur** même si l'utilisateur tape l'URL directement.
+  2. **RBAC Profile → Module/Menu (hiérarchique)/ProfilePermission + scoping** (fin) — gouverne l'accès aux menus du dashboard, **revérifié côté serveur** même si l'utilisateur tape l'URL directement.
 - **Resend** envoie les emails (invitation = lien de définition de mot de passe via le token de vérification/reset de Better Auth).
 - **Supabase Storage** stocke les fichiers ; la DB ne garde que la **clé/chemin**.
 
@@ -318,45 +318,31 @@ model Module {
   @@map("modules")
 }
 
-/// Entrée de menu du dashboard, rattachée à un module. Peut avoir des sous-menus.
+/// Entrée de menu du dashboard, rattachée à un module. Hiérarchie auto-référencée :
+/// racine si `parentId` nul, sinon sous-menu (plus de modèle SubMenu séparé).
 model Menu {
-  id       String    @id @default(cuid())
+  id       String  @id @default(cuid())
   name     String
-  moduleId String    @map("module_id")
-  module   Module    @relation(fields: [moduleId], references: [id])
+  moduleId String  @map("module_id")
+  module   Module  @relation(fields: [moduleId], references: [id])
+  parentId String? @map("parent_id")
+  parent   Menu?   @relation("MenuChildren", fields: [parentId], references: [id])
+  children Menu[]  @relation("MenuChildren")
   icon     String?
   url      String?
-  order    Int       @default(0)
-  active   Boolean   @default(true)
-  submenus SubMenu[]
+  order    Int     @default(0)
+  active   Boolean @default(true)
   permissions ProfilePermission[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([moduleId])
+  @@index([parentId])
   @@map("menus")
 }
 
-/// Sous-menu d'un menu.
-model SubMenu {
-  id     String  @id @default(cuid())
-  menuId String  @map("menu_id")
-  menu   Menu    @relation(fields: [menuId], references: [id])
-  name   String
-  url    String?
-  order  Int     @default(0)
-  active Boolean @default(true)
-  permissions ProfilePermission[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([menuId])
-  @@map("submenus")
-}
-
-/// Permission CRUD d'un profil sur un menu (ou sous-menu). C'est ici que se joue
+/// Permission CRUD d'un profil sur un menu (racine ou sous-menu). C'est ici que se joue
 /// "qui peut créer/voir/modifier/supprimer quoi" — y compris "qui peut créer des users".
 model ProfilePermission {
   id        String  @id @default(cuid())
@@ -364,8 +350,6 @@ model ProfilePermission {
   profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
   menuId    String  @map("menu_id")
   menu      Menu    @relation(fields: [menuId], references: [id], onDelete: Cascade)
-  submenuId String? @map("submenu_id")
-  submenu   SubMenu? @relation(fields: [submenuId], references: [id], onDelete: Cascade)
 
   canCreate Boolean @default(false)
   canRead   Boolean @default(false)
@@ -375,7 +359,7 @@ model ProfilePermission {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([profileId, menuId, submenuId])
+  @@unique([profileId, menuId])
   @@index([profileId])
   @@map("profile_permissions")
 }
@@ -786,7 +770,7 @@ model Constant {
 | file_emissions | ImportedInstallment | — |
 | file_encaissements | ImportedPayment | — |
 | constances | Constant | — |
-| modules/menus/sousmenus | Module/Menu/SubMenu | + order |
+| modules/menus/sousmenus | Module/Menu (auto-référencé) | sous-menus via `parentId` ; + order |
 | profilpermissions | ProfilePermission | + unique(profileId,menuId,submenuId) |
 
 ---
@@ -794,7 +778,7 @@ model Constant {
 ## 8. RBAC & scoping (fonctionnement cible)
 
 - **Qui peut créer qui** = permission ordinaire : le menu « Gestion des utilisateurs » avec `canCreate=true` dans le `ProfilePermission` du profil. ADMIN a tout ; un STAFF ne l'a que si coché. Pas de flag dédié.
-- **Menu latéral du dashboard** : reconstruit dynamiquement depuis `Module → Menu → SubMenu`, filtré par les `ProfilePermission` du profil de l'utilisateur (là où `canRead=true`).
+- **Menu latéral du dashboard** : reconstruit dynamiquement depuis `Module → Menu` (arborescent via `parentId`), filtré par les `ProfilePermission` du profil de l'utilisateur (là où `canRead=true`).
 - **Guard serveur** : chaque route/action dashboard revérifie la permission requise ⇒ **403** si absente, **même en tapant l'URL**. (Implémentation Lot 2.)
 - **Scoping des données** :
   - **ADMIN** : aucun filtre.

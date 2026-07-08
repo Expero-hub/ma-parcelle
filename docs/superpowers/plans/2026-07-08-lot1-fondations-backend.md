@@ -288,6 +288,8 @@ git commit -m "feat(prisma): auth models (User, Session, Account, Verification)"
 **Files:**
 - Create: `prisma/schema/rbac.prisma`
 
+> **MISE À JOUR post-exécution** (commit `3b45c24`) : le modèle `SubMenu` a été **supprimé** au profit d'une hiérarchie auto-référencée sur `Menu` (`parentId`/`parent`/`children`). `ProfilePermission` ne référence plus que `menuId` (unique `[profileId, menuId]`). La version ci-dessous est l'originale ; voir `prisma/schema/rbac.prisma` et le spec §7.2 pour la version en vigueur.
+
 - [ ] **Step 1: Créer `prisma/schema/rbac.prisma`**
 
 ```prisma
