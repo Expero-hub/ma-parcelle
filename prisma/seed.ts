@@ -3,11 +3,20 @@ import "dotenv/config";
 import { prisma } from "../src/lib/prisma";
 import { auth } from "../src/lib/auth";
 
+/** Un menu peut porter des sous-menus (récursif) via `children`. */
+type SeedMenu = {
+  name: string;
+  url: string;
+  icon: string;
+  order: number;
+  children?: SeedMenu[];
+};
+
 /** Modules et menus de base du dashboard (+ quelques exemples). */
 const MODULES: {
   name: string;
   order: number;
-  menus: { name: string; url: string; icon: string; order: number }[];
+  menus: SeedMenu[];
 }[] = [
   {
     name: "Administration",
@@ -46,12 +55,22 @@ const MODULES: {
     ],
   },
   {
-    // Menus d'exemple pour illustrer l'extension du système.
+    // Menus d'exemple pour illustrer l'extension du système,
+    // dont un menu avec sous-menus (structure hiérarchique).
     name: "Exemples",
     order: 5,
     menus: [
       { name: "Tableau de bord", url: "/dashboard", icon: "gauge", order: 1 },
-      { name: "Rapports", url: "/dashboard/rapports", icon: "bar-chart-3", order: 2 },
+      {
+        name: "Rapports",
+        url: "/dashboard/rapports",
+        icon: "bar-chart-3",
+        order: 2,
+        children: [
+          { name: "Rapport des ventes", url: "/dashboard/rapports/ventes", icon: "trending-up", order: 1 },
+          { name: "Rapport des encaissements", url: "/dashboard/rapports/encaissements", icon: "receipt", order: 2 },
+        ],
+      },
     ],
   },
 ];
@@ -84,6 +103,34 @@ async function seedProfiles() {
   return admin;
 }
 
+/** Upsert un menu et, récursivement, ses sous-menus. Collecte tous les ids. */
+async function upsertMenu(
+  menu: SeedMenu,
+  moduleId: string,
+  parentId: string | null,
+  collected: string[],
+) {
+  const menuId = `menu-${menu.url.replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`;
+  await prisma.menu.upsert({
+    where: { id: menuId },
+    update: { name: menu.name, url: menu.url, icon: menu.icon, order: menu.order, moduleId, parentId },
+    create: {
+      id: menuId,
+      name: menu.name,
+      url: menu.url,
+      icon: menu.icon,
+      order: menu.order,
+      moduleId,
+      parentId,
+    },
+  });
+  collected.push(menuId);
+
+  for (const child of menu.children ?? []) {
+    await upsertMenu(child, moduleId, menuId, collected);
+  }
+}
+
 async function seedMenus() {
   const menuIds: string[] = [];
 
@@ -96,20 +143,7 @@ async function seedMenus() {
     });
 
     for (const menu of mod.menus) {
-      const menuId = `menu-${menu.url.replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`;
-      await prisma.menu.upsert({
-        where: { id: menuId },
-        update: { name: menu.name, url: menu.url, icon: menu.icon, order: menu.order, moduleId },
-        create: {
-          id: menuId,
-          name: menu.name,
-          url: menu.url,
-          icon: menu.icon,
-          order: menu.order,
-          moduleId,
-        },
-      });
-      menuIds.push(menuId);
+      await upsertMenu(menu, moduleId, null, menuIds);
     }
   }
 
@@ -126,7 +160,6 @@ async function grantAdminPermissions(profileId: string, menuIds: string[]) {
         id,
         profileId,
         menuId,
-        submenuId: null,
         canCreate: true,
         canRead: true,
         canUpdate: true,

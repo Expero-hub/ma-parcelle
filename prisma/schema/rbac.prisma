@@ -40,32 +40,19 @@ model Module {
   @@map("modules")
 }
 
-/// Entrée de menu du dashboard, rattachée à un module. Peut avoir des sous-menus.
+/// Entrée de menu du dashboard, rattachée à un module.
+/// Structure hiérarchique auto-référencée : un menu est racine si `parentId` est
+/// nul, ou sous-menu d'un autre menu si `parentId` est renseigné. (Plus de modèle
+/// SubMenu séparé.)
 model Menu {
-  id          String    @id @default(cuid())
-  name        String
-  moduleId    String    @map("module_id")
-  module      Module    @relation(fields: [moduleId], references: [id])
-  icon        String?
-  url         String?
-  order       Int       @default(0)
-  active      Boolean   @default(true)
-  submenus    SubMenu[]
-  permissions ProfilePermission[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([moduleId])
-  @@map("menus")
-}
-
-/// Sous-menu d'un menu.
-model SubMenu {
   id          String  @id @default(cuid())
-  menuId      String  @map("menu_id")
-  menu        Menu    @relation(fields: [menuId], references: [id])
   name        String
+  moduleId    String  @map("module_id")
+  module      Module  @relation(fields: [moduleId], references: [id])
+  parentId    String? @map("parent_id")
+  parent      Menu?   @relation("MenuChildren", fields: [parentId], references: [id])
+  children    Menu[]  @relation("MenuChildren")
+  icon        String?
   url         String?
   order       Int     @default(0)
   active      Boolean @default(true)
@@ -74,20 +61,19 @@ model SubMenu {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([menuId])
-  @@map("submenus")
+  @@index([moduleId])
+  @@index([parentId])
+  @@map("menus")
 }
 
-/// Permission CRUD d'un profil sur un menu (ou sous-menu). C'est ici que se joue
-/// "qui peut créer/voir/modifier/supprimer quoi" — y compris "qui peut créer des users".
+/// Permission CRUD d'un profil sur un menu (racine ou sous-menu). C'est ici que se
+/// joue "qui peut créer/voir/modifier/supprimer quoi" — y compris "qui peut créer des users".
 model ProfilePermission {
-  id        String   @id @default(cuid())
-  profileId String   @map("profile_id")
-  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  menuId    String   @map("menu_id")
-  menu      Menu     @relation(fields: [menuId], references: [id], onDelete: Cascade)
-  submenuId String?  @map("submenu_id")
-  submenu   SubMenu? @relation(fields: [submenuId], references: [id], onDelete: Cascade)
+  id        String  @id @default(cuid())
+  profileId String  @map("profile_id")
+  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  menuId    String  @map("menu_id")
+  menu      Menu    @relation(fields: [menuId], references: [id], onDelete: Cascade)
 
   canCreate Boolean @default(false)
   canRead   Boolean @default(false)
@@ -97,7 +83,7 @@ model ProfilePermission {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([profileId, menuId, submenuId])
+  @@unique([profileId, menuId])
   @@index([profileId])
   @@map("profile_permissions")
 }
