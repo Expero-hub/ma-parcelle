@@ -1,0 +1,76 @@
+enum ParcelleStatus {
+  AVAILABLE
+  RESERVED
+  SOLD
+}
+
+/// Zone géographique (localisation cadastrale).
+model Zone {
+  id          String   @id @default(cuid())
+  code        String
+  fullAddress String?  @map("full_address")
+  longitude   Decimal? @db.Decimal(10, 6)
+  latitude    Decimal? @db.Decimal(10, 6)
+  department  String?
+  commune     String?
+  district    String?
+  active      Boolean  @default(true)
+  parcelles   Parcelle[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@map("zones")
+}
+
+/// Parcelle mise en vente. `geom` = géométrie GeoJSON (polygone du terrain).
+/// `createdById` = agent/créateur de la fiche (le réservant est sur Reservation).
+model Parcelle {
+  id            String         @id @default(cuid())
+  reference     String         @unique
+  area          Decimal        @db.Decimal(12, 2)
+  price         Decimal        @db.Decimal(15, 0)
+  status        ParcelleStatus @default(AVAILABLE)
+  titleVerified Boolean        @default(false) @map("title_verified")
+  description   String?
+  geom          Json?
+  block         String?
+  lot           String?
+  duration      Int?
+
+  zoneId String @map("zone_id")
+  zone   Zone   @relation(fields: [zoneId], references: [id])
+
+  createdById String? @map("created_by_id")
+  createdBy   User?   @relation("ParcelleCreatedBy", fields: [createdById], references: [id])
+
+  images       ParcelleImage[]
+  reservations Reservation[]
+  contracts    Contract[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([status])
+  @@index([zoneId])
+  @@map("parcelles")
+}
+
+/// Image d'une parcelle (clé Supabase Storage).
+model ParcelleImage {
+  id         String   @id @default(cuid())
+  parcelleId String   @map("parcelle_id")
+  parcelle   Parcelle @relation(fields: [parcelleId], references: [id], onDelete: Cascade)
+  path       String
+  caption    String?
+  isPrimary  Boolean  @default(false) @map("is_primary")
+  order      Int      @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([parcelleId])
+  @@map("parcelle_images")
+}
