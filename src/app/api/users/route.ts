@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { route } from "@/lib/api/handler";
 import { ApiError } from "@/lib/api/errors";
+import { assertSameOrigin } from "@/lib/api/origin";
 import { createUserSchema } from "@/lib/validations/auth";
 
 /** Mot de passe temporaire aléatoire fort, jamais transmis (l'utilisateur le remplace via le lien). */
@@ -14,6 +15,7 @@ function randomPassword(): string {
 }
 
 export const POST = route(async (req: NextRequest) => {
+  assertSameOrigin(req);
   const h = await headers();
   const session = await auth.api.getSession({ headers: h });
   if (!session) throw new ApiError(401, "UNAUTHORIZED", "Authentification requise.");
