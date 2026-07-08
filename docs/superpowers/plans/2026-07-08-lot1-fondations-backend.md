@@ -1161,13 +1161,15 @@ async function seedMenus() {
 
 async function grantAdminPermissions(profileId: string, menuIds: string[]) {
   for (const menuId of menuIds) {
+    // Upsert par id déterministe. On N'utilise PAS la clé composite
+    // (profileId, menuId, submenuId=null) : Postgres traite NULL comme distinct
+    // dans un index unique, donc un ré-seed créerait des doublons.
+    const id = `perm-${profileId}-${menuId}`;
     await prisma.profilePermission.upsert({
-      where: {
-        // clé composite unique (profileId, menuId, submenuId=null)
-        profileId_menuId_submenuId: { profileId, menuId, submenuId: null },
-      },
+      where: { id },
       update: { canCreate: true, canRead: true, canUpdate: true, canDelete: true },
       create: {
+        id,
         profileId,
         menuId,
         submenuId: null,
