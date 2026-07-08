@@ -53,13 +53,23 @@
 ```ts
 import { Resend } from "resend";
 
-export const resend = new Resend(process.env.RESEND_API_KEY);
+/**
+ * Instanciation paresseuse : le client n'est créé qu'au premier envoi.
+ * Évite que `new Resend(undefined)` ne lève « Missing API key » au chargement du
+ * module (sinon `next build` casse via l'import transitif `@/lib/auth`).
+ */
+let client: Resend | null = null;
+
+export function getResend(): Resend {
+  if (!client) client = new Resend(process.env.RESEND_API_KEY);
+  return client;
+}
 ```
 
 - [ ] **Step 2: Créer `src/lib/email/templates.ts`**
 
 ```ts
-import { resend } from "@/lib/email/resend";
+import { getResend } from "@/lib/email/resend";
 
 /**
  * Email neutre servant à la fois à l'invitation (1re définition du mot de passe)
@@ -67,7 +77,7 @@ import { resend } from "@/lib/email/resend";
  */
 export async function sendPasswordEmail(params: { to: string; name: string; link: string }) {
   const { to, name, link } = params;
-  return resend.emails.send({
+  return getResend().emails.send({
     from: process.env.EMAIL_FROM!,
     to,
     subject: "Ma Parcelle — Définissez votre mot de passe",
