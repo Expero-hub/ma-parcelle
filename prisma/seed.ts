@@ -192,19 +192,30 @@ async function seedAdminUser(adminProfileId: string) {
     return;
   }
 
-  // Création via l'API Better Auth → hash scrypt correct dans Account.
-  await auth.api.signUpEmail({
-    body: { email, password, name, profileId: adminProfileId },
+  // L'inscription publique est désactivée (disableSignUp) → on bootstrap le 1er
+  // admin manuellement : User + Account (credential) avec le mot de passe hashé
+  // par Better Auth (scrypt) via son contexte interne.
+  const ctx = await auth.$context;
+  const hashed = await ctx.password.hash(password);
+
+  const user = await prisma.user.create({
+    data: {
+      name,
+      email,
+      emailVerified: true,
+      role: "admin",
+      isValidated: true,
+      active: true,
+      profileId: adminProfileId,
+    },
   });
 
-  // Compléter les champs qui ne passent pas par le signup public.
-  await prisma.user.update({
-    where: { email },
+  await prisma.account.create({
     data: {
-      role: "admin",
-      emailVerified: true,
-      isValidated: true,
-      profileId: adminProfileId,
+      userId: user.id,
+      accountId: user.id,
+      providerId: "credential",
+      password: hashed,
     },
   });
 
