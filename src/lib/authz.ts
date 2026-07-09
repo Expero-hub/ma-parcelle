@@ -106,7 +106,12 @@ export async function requirePermission(
   const pathname = (await headers()).get("x-pathname") ?? "";
   if (pathname === "/dashboard" || pathname === "/mon-espace") return user;
 
-  const menus = await getUserMenus();
+  // On exclut les menus racines ("/dashboard", "/mon-espace") du calcul de préfixe :
+  // leur url étant un préfixe de TOUTES les sous-routes, les inclure permettrait
+  // qu'un droit sur "Tableau de bord" ouvre l'accès à tout le dashboard.
+  const menus = (await getUserMenus()).filter(
+    (m) => m.url !== "/dashboard" && m.url !== "/mon-espace",
+  );
   const menu = matchMenu(menus, pathname);
   if (!menu || !menu.can[action]) forbidden();
   return user;
