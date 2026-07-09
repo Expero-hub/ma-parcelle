@@ -19,8 +19,14 @@ const MODULES: {
   menus: SeedMenu[];
 }[] = [
   {
-    name: "Administration",
+    // Tableau de bord = menu 1 (accueil du dashboard).
+    name: "Général",
     order: 1,
+    menus: [{ name: "Tableau de bord", url: "/dashboard", icon: "gauge", order: 1 }],
+  },
+  {
+    name: "Administration",
+    order: 2,
     menus: [
       { name: "Utilisateurs", url: "/dashboard/utilisateurs", icon: "users", order: 1 },
       { name: "Profils & permissions", url: "/dashboard/profils", icon: "shield", order: 2 },
@@ -29,16 +35,17 @@ const MODULES: {
   },
   {
     name: "Organisation",
-    order: 2,
+    order: 3,
     menus: [
       { name: "Compagnies", url: "/dashboard/compagnies", icon: "building-2", order: 1 },
+      // Les points de vente d'une agence se gèrent dans le DÉTAIL de l'agence
+      // (/dashboard/agences/[id]) — pas de menu autonome.
       { name: "Agences", url: "/dashboard/agences", icon: "store", order: 2 },
-      { name: "Points de vente", url: "/dashboard/points-de-vente", icon: "map-pin", order: 3 },
     ],
   },
   {
     name: "Catalogue",
-    order: 3,
+    order: 4,
     menus: [
       { name: "Zones", url: "/dashboard/zones", icon: "map", order: 1 },
       { name: "Parcelles", url: "/dashboard/parcelles", icon: "land-plot", order: 2 },
@@ -46,7 +53,7 @@ const MODULES: {
   },
   {
     name: "Ventes",
-    order: 4,
+    order: 5,
     menus: [
       { name: "Réservations", url: "/dashboard/reservations", icon: "bookmark", order: 1 },
       { name: "Contrats", url: "/dashboard/contrats", icon: "file-text", order: 2 },
@@ -55,17 +62,15 @@ const MODULES: {
     ],
   },
   {
-    // Menus d'exemple pour illustrer l'extension du système,
-    // dont un menu avec sous-menus (structure hiérarchique).
+    // Menu d'exemple avec sous-menus (démontre la structure hiérarchique).
     name: "Exemples",
-    order: 5,
+    order: 6,
     menus: [
-      { name: "Tableau de bord", url: "/dashboard", icon: "gauge", order: 1 },
       {
         name: "Rapports",
         url: "/dashboard/rapports",
         icon: "bar-chart-3",
-        order: 2,
+        order: 1,
         children: [
           { name: "Rapport des ventes", url: "/dashboard/rapports/ventes", icon: "trending-up", order: 1 },
           { name: "Rapport des encaissements", url: "/dashboard/rapports/encaissements", icon: "receipt", order: 2 },
