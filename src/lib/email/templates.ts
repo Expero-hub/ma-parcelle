@@ -19,7 +19,7 @@ function escapeHtml(s: string): string {
  */
 export async function sendPasswordEmail(params: { to: string; name: string; link: string }) {
   const { to, name, link } = params;
-  return getResend().emails.send({
+  const result = await getResend().emails.send({
     from: process.env.EMAIL_FROM!,
     to,
     subject: "Ma Parcelle — Définissez votre mot de passe",
@@ -35,4 +35,9 @@ export async function sendPasswordEmail(params: { to: string; name: string; link
       </div>
     `,
   });
+  if (result.error) {
+    // L'envoi Resend échoue en silence sinon (l'erreur n'est pas levée).
+    console.error("[email] Échec d'envoi (Resend) :", result.error);
+  }
+  return result;
 }
