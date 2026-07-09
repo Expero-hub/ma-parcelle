@@ -1,10 +1,19 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { MoreHorizontal } from "lucide-react";
 
-import { http } from "@/lib/http";
+import { useRouter } from "@/hooks/use-router";
+import { useUserActions } from "@/hooks/use-user-actions";
 import { Input } from "@/components/ui/input";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 
 type Row = {
   id: string;
@@ -17,9 +26,10 @@ type Row = {
 
 export function UsersTable({ rows }: { rows: Row[] }) {
   const router = useRouter();
+  const { busyId, toggleActive, remove } = useUserActions();
   const [q, setQ] = useState("");
   const [profile, setProfile] = useState("");
-  const [busy, setBusy] = useState<string | null>(null);
+  const [confirm, setConfirm] = useState<{ id: string; name: string; hard: boolean } | null>(null);
 
   const profiles = useMemo(() => Array.from(new Set(rows.map((r) => r.profile))), [rows]);
   const filtered = rows.filter(
@@ -30,14 +40,10 @@ export function UsersTable({ rows }: { rows: Row[] }) {
       (!profile || r.profile === profile),
   );
 
-  async function toggle(id: string, active: boolean) {
-    setBusy(id);
-    try {
-      await http.patch(`/users/${id}`, { active: !active });
-      router.refresh();
-    } finally {
-      setBusy(null);
-    }
+  async function onConfirmDelete() {
+    if (!confirm) return;
+    await remove(confirm.id, confirm.hard);
+    setConfirm(null);
   }
 
   return (
@@ -70,7 +76,7 @@ export function UsersTable({ rows }: { rows: Row[] }) {
               <th className="px-4 py-3 font-medium">Profil</th>
               <th className="px-4 py-3 font-medium">Périmètre</th>
               <th className="px-4 py-3 font-medium">Statut</th>
-              <th className="px-4 py-3 font-medium">Action</th>
+              <th className="px-4 py-3 text-right font-medium">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -90,15 +96,37 @@ export function UsersTable({ rows }: { rows: Row[] }) {
                     {r.active ? "Actif" : "Inactif"}
                   </span>
                 </td>
-                <td className="px-4 py-3">
-                  <button
-                    type="button"
-                    disabled={busy === r.id}
-                    onClick={() => toggle(r.id, r.active)}
-                    className="text-sm font-medium text-primary hover:underline disabled:opacity-50"
-                  >
-                    {r.active ? "Désactiver" : "Activer"}
-                  </button>
+                <td className="px-4 py-3 text-right">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      aria-label="Actions"
+                      disabled={busyId === r.id}
+                      className="inline-flex rounded-lg p-1.5 text-text-2 hover:bg-surface-2 disabled:opacity-50"
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => router.push(`/dashboard/utilisateurs/${r.id}`)}>
+                        Détail
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => router.push(`/dashboard/utilisateurs/${r.id}/modifier`)}>
+                        Modifier
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => toggleActive(r.id, r.active)}>
+                        {r.active ? "Désactiver" : "Activer"}
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => setConfirm({ id: r.id, name: r.name, hard: false })}>
+                        Supprimer
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => setConfirm({ id: r.id, name: r.name, hard: true })}
+                        className="text-alert"
+                      >
+                        Supprimer définitivement
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </td>
               </tr>
             ))}
@@ -110,6 +138,21 @@ export function UsersTable({ rows }: { rows: Row[] }) {
           </tbody>
         </table>
       </div>
+
+      <ConfirmDialog
+        open={!!confirm}
+        title={confirm?.hard ? "Supprimer définitivement ?" : "Supprimer l'utilisateur ?"}
+        description={
+          confirm?.hard
+            ? `${confirm?.name} sera supprimé définitivement. Cette action est irréversible.`
+            : `${confirm?.name} sera désactivé et masqué des listes. Cette action est réversible.`
+        }
+        confirmLabel={confirm?.hard ? "Supprimer définitivement" : "Supprimer"}
+        destructive={confirm?.hard}
+        loading={busyId === confirm?.id}
+        onConfirm={onConfirmDelete}
+        onCancel={() => setConfirm(null)}
+      />
     </div>
   );
 }
