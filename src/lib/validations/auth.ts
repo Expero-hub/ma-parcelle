@@ -29,5 +29,10 @@ export const createUserSchema = z.object({
   phone: z.string().optional(),
   profileId: z.string().min(1, "Profil requis."),
   companyId: z.string().optional(),
+  agencyIds: z.array(z.string()).optional().default([]),
+  pointOfSaleIds: z.array(z.string()).optional().default([]),
 });
 export type CreateUserInput = z.infer<typeof createUserSchema>;
+
+export const toggleUserSchema = z.object({ active: z.boolean() });
+export type ToggleUserInput = z.infer<typeof toggleUserSchema>;
