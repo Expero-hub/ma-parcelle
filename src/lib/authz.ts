@@ -111,3 +111,19 @@ export async function requirePermission(
   if (!menu || !menu.can[action]) forbidden();
   return user;
 }
+
+/**
+ * ADMIN → true. Sinon vérifie le droit `action` du profil sur le menu exact `menuUrl`.
+ * Sert aux gardes d'API et à l'affichage conditionnel côté UI.
+ */
+export async function can(
+  menuUrl: string,
+  action: "read" | "create" | "update" | "delete",
+): Promise<boolean> {
+  const user = await getCurrentUser();
+  if (!user) return false;
+  if ((user.role ?? "user") === "admin") return true;
+  const menus = await getUserMenus();
+  const menu = menus.find((m) => m.url === menuUrl);
+  return menu ? menu.can[action] : false;
+}
