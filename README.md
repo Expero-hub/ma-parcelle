@@ -239,14 +239,49 @@ Cinq barrières, du plus grossier au plus fin :
 > Les vérifications **end-to-end** (login, invitation, scoping réel, ban) nécessitent Supabase + Resend
 > branchés (`.env` réel + `db:migrate` + `db:seed`). Le code compile et build sans credentials.
 
-## 13. Recommandations pour la suite
+## 13. Tâches restantes & comment les mettre en place
 
-- **Brancher les services** puis dérouler les scénarios E2E (voir les tâches « GATED » des plans dans
-  `docs/superpowers/plans/`).
-- **Prochaines features** : brancher le front public sur la DB (remplacer le mock `src/lib/parcelles.ts`),
-  CRUD organisation (agences/PDV), réservations & contrats réels, écrans d'administration des
-  profils/menus (avec `revalidateTag` à l'enregistrement).
-- **Rôle `staff` typé** : aujourd'hui casté à l'appel de `createUser` ; pour en faire un rôle de
-  première classe, configurer l'access-control du plugin `admin()` dans `src/lib/auth.ts`.
-- **Toujours** : revalider les permissions **côté serveur**, ne jamais exposer la service role key,
-  garder la validation zod partagée client/serveur.
+> **Le patron à suivre** (établi au Lot 3.3, feature *Utilisateurs*) pour toute nouvelle section CRUD :
+> 1. **Menu** : ajouter le menu dans le seed (`prisma/seed.ts`) avec son `url`/`icon`, puis `db:seed`.
+> 2. **Schéma zod** dans `src/lib/validations/` (partagé client + serveur).
+> 3. **Endpoints** `src/app/api/<ressource>/route.ts` (+ `[id]/route.ts`) : `assertSameOrigin` →
+>    `can("/dashboard/<url>", "create"|"update"|...)` → validation zod → scoping (`getScoped*` /
+>    `assertWithinScope`) → Prisma. Après une mutation qui touche les droits/menus : `revalidateTag`.
+> 4. **Page serveur** `src/app/dashboard/<url>/page.tsx` : `requirePermission()` + lecture Prisma
+>    **scopée** (`getScopedUserWhere` ou équivalent) → composant client (table / formulaire rhf+zod
+>    postant via `src/lib/http.ts`).
+> 5. **Vérifier** : `npx tsc --noEmit` puis `npm run build`.
+
+**A. Brancher les services & valider en E2E** *(prérequis à tout test réel)*
+Remplir `.env`, créer les buckets, `db:migrate` + `db:seed`, puis dérouler les scénarios « GATED »
+listés en fin de chaque plan (`docs/superpowers/plans/`) : login admin, création d'un STAFF scopé,
+invitation email, 403 hors périmètre, ban/unban.
+
+**B. Brancher le front public sur la DB** *(retirer le mock)*
+Aujourd'hui l'accueil et `/parcelles` lisent `src/lib/parcelles.ts` (données factices). Créer un
+module d'accès (ex. `src/lib/queries/parcelles.ts`) qui lit `prisma.parcelle` (avec `zone`, `images`,
+`status`), et remplacer les usages de `PARCELLES`/`getParcelle`. Uploader les images sur le bucket
+`parcelle-images` (Supabase) et stocker la **clé** dans `ParcelleImage.path`.
+
+**C. CRUD Organisation** (Compagnies, Agences, Points de vente)
+Suivre le patron ci-dessus. Ajouter les menus (déjà seedés : *Compagnies/Agences/Points de vente*),
+les schémas zod, les endpoints `/api/agencies` etc., les pages `dashboard/agences`… C'est aussi ce qui
+**alimente le scoping** : sans agences/PDV, un STAFF n'a pas de périmètre.
+
+**D. Écrans d'administration Profils & Menus**
+Pages pour créer des profils STAFF et **cocher leurs `ProfilePermission`** (matrice menu × CRUD), et
+gérer modules/menus. **Important** : à chaque enregistrement, appeler `revalidateTag(`permissions:${profileId}`)`
+ou `revalidateTag("menus:all")` pour que le cache reflète le changement immédiatement (voir §7).
+
+**E. Réservations & Contrats réels** *(remplacer les placeholders de `/mon-espace`)*
+Bouton « Réserver » sur la page détail parcelle (client connecté) → `Reservation`. Cycle contrat →
+`Installment` (échéances) → `Payment` (encaissements). Réutiliser scoping + permissions côté staff.
+
+**F. Divers**
+- **Rôle `staff` typé** : aujourd'hui casté à l'appel de `createUser`. Pour en faire un rôle de
+  première classe (access-control), configurer `roles`/`ac` du plugin `admin()` dans `src/lib/auth.ts`.
+- **Facturation en masse / imports** : tables de staging déjà prêtes (`imports.prisma`).
+- **CSP** : ajouter une Content-Security-Policy (notée mais non implémentée, cf. `next.config.ts`).
+
+**Règles d'or** : toujours revalider les permissions **côté serveur** (jamais se fier au masquage UI) ;
+ne jamais exposer `SUPABASE_SERVICE_ROLE_KEY` côté client ; garder la validation zod **partagée**.
