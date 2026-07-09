@@ -47,3 +47,47 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     return toErrorResponse(err);
   }
 }
+
+export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  try {
+    assertSameOrigin(req);
+    const { id } = await ctx.params;
+    const h = await headers();
+    const session = await auth.api.getSession({ headers: h });
+    if (!session) throw new ApiError(401, "UNAUTHORIZED", "Authentification requise.");
+    if (!(await can("/dashboard/utilisateurs", "delete"))) {
+      throw new ApiError(403, "FORBIDDEN", "Droit insuffisant.");
+    }
+
+    const requester = session.user;
+    const requesterIsAdmin = (requester.role ?? "user") === "admin";
+    const hard = new URL(req.url).searchParams.get("hard") === "true";
+
+    if (id === requester.id) {
+      throw new ApiError(400, "SELF_DELETE", "Vous ne pouvez pas vous supprimer vous-même.");
+    }
+
+    const target = await prisma.user.findUnique({ where: { id }, select: { id: true, role: true } });
+    if (!target) throw new ApiError(404, "NOT_FOUND", "Utilisateur introuvable.");
+
+    if (!requesterIsAdmin) {
+      if (target.role === "admin") throw new ApiError(403, "FORBIDDEN", "Action non autorisée.");
+      const where = await getScopedUserWhere(requester);
+      const inScope = await prisma.user.findFirst({ where: { AND: [{ id }, where] }, select: { id: true } });
+      if (!inScope) throw new ApiError(403, "OUT_OF_SCOPE", "Utilisateur hors de votre périmètre.");
+    }
+
+    if (hard) {
+      // Suppression définitive (cascade sur Account/Session/appartenances).
+      await prisma.user.delete({ where: { id } });
+    } else {
+      // Soft delete : masqué des listes + banni (ne peut plus se connecter). Réversible.
+      await auth.api.banUser({ body: { userId: id }, headers: h }).catch(() => {});
+      await prisma.user.update({ where: { id }, data: { deletedAt: new Date(), active: false } });
+    }
+
+    return Response.json({ data: { id, deleted: true, hard } });
+  } catch (err) {
+    return toErrorResponse(err);
+  }
+}
