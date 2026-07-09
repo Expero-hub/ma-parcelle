@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
+import { useRouter } from "@/hooks/use-router";
 import { signIn, authClient } from "@/lib/auth-client";
 import { loginSchema, type LoginInput } from "@/lib/validations/auth";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,9 @@ import { Input } from "@/components/ui/input";
 export default function ConnexionPage() {
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
+  // Reste vrai pendant la redirection (le composant n'est démonté qu'à l'arrivée
+  // sur la nouvelle page) → empêche un second clic et garde le bouton en chargement.
+  const [redirecting, setRedirecting] = useState(false);
   const {
     register,
     handleSubmit,
@@ -29,9 +32,12 @@ export default function ConnexionPage() {
     }
     const session = await authClient.getSession();
     const role = session.data?.user.role;
+    setRedirecting(true);
     router.push(role === "admin" || role === "staff" ? "/dashboard" : "/mon-espace");
     router.refresh();
   }
+
+  const loading = isSubmitting || redirecting;
 
   return (
     <div>
@@ -58,8 +64,8 @@ export default function ConnexionPage() {
 
         {formError && <p className="text-sm text-alert">{formError}</p>}
 
-        <Button type="submit" disabled={isSubmitting} className="mt-2 w-full">
-          {isSubmitting ? "Connexion…" : "Se connecter"}
+        <Button type="submit" disabled={loading} className="mt-2 w-full">
+          {loading ? "Connexion…" : "Se connecter"}
         </Button>
       </form>
     </div>

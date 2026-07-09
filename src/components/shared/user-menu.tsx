@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/hooks/use-router";
 
 import { signOut } from "@/lib/auth-client";
 import {

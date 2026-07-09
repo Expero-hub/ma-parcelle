@@ -2,10 +2,11 @@
 
 import { Suspense, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
+import { useRouter } from "@/hooks/use-router";
 import { resetPassword } from "@/lib/auth-client";
 import { newPasswordSchema, type NewPasswordInput } from "@/lib/validations/auth";
 import { Button } from "@/components/ui/button";

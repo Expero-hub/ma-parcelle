@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
 
+import { useRouter } from "@/hooks/use-router";
 import { http, type NormalizedError } from "@/lib/http";
 import { createUserSchema } from "@/lib/validations/auth";
 import { Button } from "@/components/ui/button";
