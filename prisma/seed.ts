@@ -28,9 +28,15 @@ const MODULES: {
     name: "Administration",
     order: 2,
     menus: [
-      { name: "Utilisateurs", url: "/dashboard/utilisateurs", icon: "users", order: 1 },
-      { name: "Profils & permissions", url: "/dashboard/profils", icon: "shield", order: 2 },
-      { name: "Modules & menus", url: "/dashboard/menus", icon: "layout-grid", order: 3 },
+      { 
+        name: "Utilisateurs", 
+        url: "/dashboard/utilisateurs", 
+        icon: "users", 
+        order: 1, 
+        children: [{ name: "Clients", url: "/dashboard/utilisateurs/clients", icon: "users", order: 2 }],
+      },
+      { name: "Profils & permissions", url: "/dashboard/profils", icon: "shield", order: 3 },
+      { name: "Modules & menus", url: "/dashboard/menus", icon: "layout-grid", order: 4 },
     ],
   },
   {
@@ -38,8 +44,6 @@ const MODULES: {
     order: 3,
     menus: [
       { name: "Compagnies", url: "/dashboard/compagnies", icon: "building-2", order: 1 },
-      // Les points de vente d'une agence se gèrent dans le DÉTAIL de l'agence
-      // (/dashboard/agences/[id]) — pas de menu autonome.
       { name: "Agences", url: "/dashboard/agences", icon: "store", order: 2 },
     ],
   },
@@ -52,30 +56,13 @@ const MODULES: {
     ],
   },
   {
-    name: "Ventes",
+    name: "Importations",
     order: 5,
     menus: [
-      { name: "Réservations", url: "/dashboard/reservations", icon: "bookmark", order: 1 },
-      { name: "Contrats", url: "/dashboard/contrats", icon: "file-text", order: 2 },
-      { name: "Échéances", url: "/dashboard/echeances", icon: "calendar-clock", order: 3 },
-      { name: "Paiements", url: "/dashboard/paiements", icon: "wallet", order: 4 },
-    ],
-  },
-  {
-    // Menu d'exemple avec sous-menus (démontre la structure hiérarchique).
-    name: "Exemples",
-    order: 6,
-    menus: [
-      {
-        name: "Rapports",
-        url: "/dashboard/rapports",
-        icon: "bar-chart-3",
-        order: 1,
-        children: [
-          { name: "Rapport des ventes", url: "/dashboard/rapports/ventes", icon: "trending-up", order: 1 },
-          { name: "Rapport des encaissements", url: "/dashboard/rapports/encaissements", icon: "receipt", order: 2 },
-        ],
-      },
+      { name: "Fichiers", url: "/dashboard/importations/fichiers", icon: "file-spreadsheet", order: 1 },
+      { name: "Contrats", url: "/dashboard/importations/liste-des-contrats", icon: "file-text", order: 2 },
+      { name: "Émissions", url: "/dashboard/importations/liste-des-emissions", icon: "calendar-clock", order: 3 },
+      { name: "Encaissements", url: "/dashboard/importations/liste-des-encaissements", icon: "wallet", order: 4 },
     ],
   },
 ];
@@ -93,7 +80,7 @@ async function seedProfiles() {
     },
   });
 
-  await prisma.profile.upsert({
+  const client = await prisma.profile.upsert({
     where: { id: "profile-client" },
     update: {},
     create: {
@@ -105,7 +92,7 @@ async function seedProfiles() {
     },
   });
 
-  return admin;
+  return { admin, client };
 }
 
 /** Upsert un menu et, récursivement, ses sous-menus. Collecte tous les ids. */
@@ -192,9 +179,6 @@ async function seedAdminUser(adminProfileId: string) {
     return;
   }
 
-  // L'inscription publique est désactivée (disableSignUp) → on bootstrap le 1er
-  // admin manuellement : User + Account (credential) avec le mot de passe hashé
-  // par Better Auth (scrypt) via son contexte interne.
   const ctx = await auth.$context;
   const hashed = await ctx.password.hash(password);
 
@@ -222,11 +206,187 @@ async function seedAdminUser(adminProfileId: string) {
   console.log(`[seed] Admin ${email} créé.`);
 }
 
+async function seedTestClientUserAndContract(clientProfileId: string) {
+  const clientEmail = "perodev10@gmail.com";
+  const password = process.env.SEED_ADMIN_PASSWORD || "Password123!";
+
+  let clientUser = await prisma.user.findUnique({ where: { email: clientEmail } });
+
+  if (!clientUser) {
+    const ctx = await auth.$context;
+    const hashed = await ctx.password.hash(password);
+
+    clientUser = await prisma.user.create({
+      data: {
+        name: "John Doe",
+        email: clientEmail,
+        phone: "0123456789",
+        emailVerified: true,
+        role: "user",
+        isValidated: true,
+        active: true,
+        profileId: clientProfileId,
+      },
+    });
+
+    await prisma.account.create({
+      data: {
+        userId: clientUser.id,
+        accountId: clientUser.id,
+        providerId: "credential",
+        password: hashed,
+      },
+    });
+    console.log(`[seed] Client de test ${clientEmail} créé.`);
+  }
+
+  // 1. S'assurer qu'une agence et un point de vente existent
+  let agency = await prisma.agency.findFirst({ where: { deletedAt: null } });
+  if (!agency) {
+    agency = await prisma.agency.create({
+      data: {
+        name: "Agence de Menontin",
+        phone: "0123456789",
+        address: "Cotonou, Menontin",
+        active: true,
+      },
+    });
+  }
+
+  let pos = await prisma.pointOfSale.findFirst({ where: { agencyId: agency.id } });
+  if (!pos) {
+    pos = await prisma.pointOfSale.create({
+      data: {
+        name: "Point de Vente Menontin A",
+        phone: "0123456789",
+        address: "Cotonou",
+        active: true,
+        agencyId: agency.id,
+      },
+    });
+  }
+
+  // S'assurer qu'une zone et une parcelle de test existent
+  let zone = await prisma.zone.findFirst({ where: { deletedAt: null } });
+  if (!zone) {
+    zone = await prisma.zone.create({
+      data: {
+        code: "ZN-COTONOU",
+        commune: "Cotonou",
+        district: "Fidjrossè",
+        department: "Littoral",
+        fullAddress: "Fidjrossè, Cotonou, Littoral, Bénin",
+      },
+    });
+  }
+
+  let parcelle = await prisma.parcelle.findFirst({ where: { deletedAt: null } });
+  if (!parcelle) {
+    parcelle = await prisma.parcelle.create({
+      data: {
+        reference: "Par10001",
+        area: 1500,
+        price: 5000000,
+        status: "AVAILABLE",
+        zoneId: zone.id,
+        pointOfSaleId: pos.id,
+        description: "Parcelle de test pour contrat client",
+      },
+    });
+  } else if (!parcelle.pointOfSaleId) {
+    parcelle = await prisma.parcelle.update({
+      where: { id: parcelle.id },
+      data: { pointOfSaleId: pos.id },
+    });
+  }
+
+  // 2. Créer un contrat actif CNT001 pour perodev10@gmail.com
+  let contract = await prisma.contract.findUnique({ where: { reference: "CNT001" } });
+ 
+  if (!contract) {
+    contract = await prisma.contract.create({
+      data: {
+        reference: "CNT001",
+        totalAmount: 500000,
+        status: "ACTIVE",
+        periodicity: "MONTHLY",
+        installmentAmount: 500000,
+        startDate: new Date("2025-07-04"),
+        endDate: new Date("2030-06-04"),
+        isValidated: true,
+        userId: clientUser.id,
+        parcelleId: parcelle.id,
+        agencyId: agency.id,
+      },
+    });
+    console.log(`[seed] Contrat actif CNT001 rattaché à ${clientEmail} et à l'agence ${agency.name} créé.`);
+  }
+
+  // 3. Émissions (Installments)
+  let emi1 = await prisma.installment.findUnique({ where: { reference: "Emi10001" } });
+  if (!emi1) {
+    emi1 = await prisma.installment.create({
+      data: {
+        reference: "Emi10001",
+        startDate: new Date("2025-08-01"),
+        endDate: new Date("2025-08-31"),
+        amount: 500000,
+        status: "PAID",
+        contractId: contract.id,
+      },
+    });
+  }
+
+  let emi2 = await prisma.installment.findUnique({ where: { reference: "Emi10002" } });
+  if (!emi2) {
+    emi2 = await prisma.installment.create({
+      data: {
+        reference: "Emi10002",
+        startDate: new Date("2025-09-01"),
+        endDate: new Date("2025-09-30"),
+        amount: 500000,
+        status: "PAID",
+        contractId: contract.id,
+      },
+    });
+  }
+
+  // 4. Encaissements (Payments)
+  let enc1 = await prisma.payment.findUnique({ where: { reference: "Enc10001" } });
+  if (!enc1) {
+    await prisma.payment.create({
+      data: {
+        reference: "Enc10001",
+        amount: 500000,
+        paymentDate: new Date("2025-07-08"),
+        agencyFee: 50000,
+        comment: "RAS",
+        installmentId: emi1.id,
+      },
+    });
+  }
+
+  let enc2 = await prisma.payment.findUnique({ where: { reference: "Enc10002" } });
+  if (!enc2) {
+    await prisma.payment.create({
+      data: {
+        reference: "Enc10002",
+        amount: 500000,
+        paymentDate: new Date("2025-07-08"),
+        agencyFee: 50000,
+        comment: "RAS",
+        installmentId: emi2.id,
+      },
+    });
+  }
+}
+
 async function main() {
-  const adminProfile = await seedProfiles();
+  const { admin, client } = await seedProfiles();
   const menuIds = await seedMenus();
-  await grantAdminPermissions(adminProfile.id, menuIds);
-  await seedAdminUser(adminProfile.id);
+  await grantAdminPermissions(admin.id, menuIds);
+  await seedAdminUser(admin.id);
+  await seedTestClientUserAndContract(client.id);
   console.log("[seed] Terminé.");
 }
 
@@ -239,3 +399,4 @@ main()
     await prisma.$disconnect();
     process.exit(1);
   });
+

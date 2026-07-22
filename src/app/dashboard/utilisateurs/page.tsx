@@ -10,10 +10,11 @@ export default async function UsersPage() {
   const user = (await getCurrentUser())!;
   const where = await getScopedUserWhere(user as ScopedUser);
 
-  const [users, canCreate] = await Promise.all([
+  const [users, totalCount, activeProfiles, canCreate] = await Promise.all([
     prisma.user.findMany({
-      where: { ...where, deletedAt: null },
+      where: { ...where, deletedAt: null, profile: { type: { not: "CLIENT" } } },
       orderBy: { createdAt: "desc" },
+      take: 10,
       select: {
         id: true,
         name: true,
@@ -24,6 +25,14 @@ export default async function UsersPage() {
         agencyMembers: { select: { agency: { select: { name: true } } } },
         posMembers: { select: { pointOfSale: { select: { name: true } } } },
       },
+    }),
+    prisma.user.count({
+      where: { ...where, deletedAt: null, profile: { type: { not: "CLIENT" } } },
+    }),
+    prisma.profile.findMany({
+      where: { deletedAt: null, active: true, type: { not: "CLIENT" } },
+      select: { name: true },
+      orderBy: { name: "asc" },
     }),
     can("/dashboard/utilisateurs", "create"),
   ]);
@@ -40,6 +49,8 @@ export default async function UsersPage() {
     active: u.active && !u.banned,
   }));
 
+  const profileNames = activeProfiles.map((p) => p.name);
+
   return (
     <div className="p-6 md:p-8">
       <div className="mb-6 flex items-center justify-between">
@@ -53,7 +64,7 @@ export default async function UsersPage() {
           </Link>
         )}
       </div>
-      <UsersTable rows={rows} />
+      <UsersTable rows={rows} initialTotalCount={totalCount} profileOptions={profileNames} />
     </div>
   );
 }

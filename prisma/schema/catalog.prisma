@@ -1,25 +1,18 @@
-enum ParcelleStatus {
-  AVAILABLE
-  RESERVED
-  SOLD
-}
-
 /// Zone géographique (localisation cadastrale).
 model Zone {
-  id          String   @id @default(cuid())
+  id          String     @id @default(cuid())
   code        String
-  fullAddress String?  @map("full_address")
-  longitude   Decimal? @db.Decimal(10, 6)
-  latitude    Decimal? @db.Decimal(10, 6)
+  fullAddress String?    @map("full_address")
+  longitude   Decimal?   @db.Decimal(10, 6)
+  latitude    Decimal?   @db.Decimal(10, 6)
   department  String?
   commune     String?
   district    String?
-  active      Boolean  @default(true)
+  active      Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  deletedAt   DateTime?
   parcelles   Parcelle[]
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
 
   @@map("zones")
 }
@@ -27,34 +20,34 @@ model Zone {
 /// Parcelle mise en vente. `geom` = géométrie GeoJSON (polygone du terrain).
 /// `createdById` = agent/créateur de la fiche (le réservant est sur Reservation).
 model Parcelle {
-  id            String         @id @default(cuid())
-  reference     String         @unique
-  area          Decimal        @db.Decimal(12, 2)
-  price         Decimal        @db.Decimal(15, 0)
-  status        ParcelleStatus @default(AVAILABLE)
-  titleVerified Boolean        @default(false) @map("title_verified")
+  id            String          @id @default(cuid())
+  reference     String          @unique
+  area          Decimal         @db.Decimal(12, 2)
+  price         Decimal         @db.Decimal(15, 0)
+  status        ParcelleStatus  @default(AVAILABLE)
+  titleVerified Boolean         @default(false) @map("title_verified")
   description   String?
   geom          Json?
   block         String?
   lot           String?
-  duration      Int?
-
-  zoneId String @map("zone_id")
-  zone   Zone   @relation(fields: [zoneId], references: [id])
-
-  createdById String? @map("created_by_id")
-  createdBy   User?   @relation("ParcelleCreatedBy", fields: [createdById], references: [id])
-
-  images       ParcelleImage[]
-  reservations Reservation[]
-  contracts    Contract[]
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
+  zoneId        String          @map("zone_id")
+  createdById   String?         @map("created_by_id")
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  deletedAt     DateTime?
+  maxDuration   Int?            @map("max_duration")
+  minDuration   Int?            @map("min_duration")
+  pointOfSaleId String?         @map("point_of_sale_id")
+  contracts     Contract[]
+  images        ParcelleImage[]
+  createdBy     User?           @relation("ParcelleCreatedBy", fields: [createdById], references: [id])
+  pointOfSale   PointOfSale?    @relation(fields: [pointOfSaleId], references: [id])
+  zone          Zone            @relation(fields: [zoneId], references: [id])
+  reservations  Reservation[]
 
   @@index([status])
   @@index([zoneId])
+  @@index([pointOfSaleId])
   @@map("parcelles")
 }
 
@@ -62,15 +55,20 @@ model Parcelle {
 model ParcelleImage {
   id         String   @id @default(cuid())
   parcelleId String   @map("parcelle_id")
-  parcelle   Parcelle @relation(fields: [parcelleId], references: [id], onDelete: Cascade)
   path       String
   caption    String?
   isPrimary  Boolean  @default(false) @map("is_primary")
   order      Int      @default(0)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  parcelle   Parcelle @relation(fields: [parcelleId], references: [id], onDelete: Cascade)
 
   @@index([parcelleId])
   @@map("parcelle_images")
+}
+
+enum ParcelleStatus {
+  AVAILABLE
+  RESERVED
+  SOLD
 }

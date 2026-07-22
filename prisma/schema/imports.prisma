@@ -1,17 +1,15 @@
 /// Fichier importé (ex. Excel/CSV d'échéances ou de paiements) stocké sur Storage.
 model ImportFile {
-  id           String @id @default(cuid())
-  name         String
-  type         String
-  path         String
-  uploadedById String @map("uploaded_by_id")
-  uploadedBy   User   @relation(fields: [uploadedById], references: [id])
-
+  id                   String                @id @default(cuid())
+  name                 String
+  type                 String
+  path                 String
+  uploadedById         String                @map("uploaded_by_id")
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  uploadedBy           User                  @relation(fields: [uploadedById], references: [id])
   importedInstallments ImportedInstallment[]
   importedPayments     ImportedPayment[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 
   @@index([uploadedById])
   @@map("import_files")
@@ -21,12 +19,12 @@ model ImportFile {
 model ImportedInstallment {
   id          String     @id @default(cuid())
   fileId      String     @map("file_id")
-  file        ImportFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
   contractRef String     @map("contract_ref")
   startDate   DateTime?  @map("start_date")
   endDate     DateTime?  @map("end_date")
   amount      Decimal?   @db.Decimal(15, 0)
   status      String?
+  file        ImportFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
 
   @@index([fileId])
   @@map("imported_installments")
@@ -36,11 +34,11 @@ model ImportedInstallment {
 model ImportedPayment {
   id             String     @id @default(cuid())
   fileId         String     @map("file_id")
-  file           ImportFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
   installmentRef String     @map("installment_ref")
   paymentDate    DateTime?  @map("payment_date")
   amount         Decimal?   @db.Decimal(15, 0)
   status         String?
+  file           ImportFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
 
   @@index([fileId])
   @@map("imported_payments")

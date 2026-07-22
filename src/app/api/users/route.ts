@@ -8,13 +8,85 @@ import { route } from "@/lib/api/handler";
 import { ApiError } from "@/lib/api/errors";
 import { assertSameOrigin } from "@/lib/api/origin";
 import { can } from "@/lib/authz";
-import { assertWithinScope } from "@/lib/scope";
+import { assertWithinScope, getScopedUserWhere, type ScopedUser } from "@/lib/scope";
 import { createUserSchema } from "@/lib/validations/auth";
+import { parsePaginationParams, formatPaginatedResponse } from "@/lib/api/pagination";
 
 /** Mot de passe temporaire aléatoire fort, jamais transmis (l'utilisateur le remplace via le lien). */
 function randomPassword(): string {
   return randomBytes(24).toString("base64url") + "aA1!";
 }
+
+export const GET = route(async (req: NextRequest) => {
+  const h = await headers();
+  const session = await auth.api.getSession({ headers: h });
+  if (!session) throw new ApiError(401, "UNAUTHORIZED", "Authentification requise.");
+  if (!(await can("/dashboard/utilisateurs", "read"))) {
+    throw new ApiError(403, "FORBIDDEN", "Vous n'avez pas le droit de consulter les utilisateurs.");
+  }
+
+  const { page, limit, skip, search } = parsePaginationParams(req);
+  const url = new URL(req.url);
+  const profileFilter = url.searchParams.get("profile") || "";
+  const clientOnly = url.searchParams.get("clientOnly") === "true";
+
+  const scopedWhere = await getScopedUserWhere(session.user as ScopedUser);
+  const where: any = {
+    ...scopedWhere,
+    deletedAt: null,
+  };
+
+  if (clientOnly) {
+    where.profile = { type: "CLIENT" };
+  } else {
+    if (profileFilter) {
+      where.profile = { name: profileFilter, type: { not: "CLIENT" } };
+    } else {
+      where.profile = { type: { not: "CLIENT" } };
+    }
+  }
+
+  if (search) {
+    where.OR = [
+      { name: { contains: search, mode: "insensitive" } },
+      { email: { contains: search, mode: "insensitive" } },
+    ];
+  }
+
+  const [users, total] = await Promise.all([
+    prisma.user.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: limit,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        active: true,
+        banned: true,
+        profile: { select: { name: true } },
+        agencyMembers: { select: { agency: { select: { name: true } } } },
+        posMembers: { select: { pointOfSale: { select: { name: true } } } },
+      },
+    }),
+    prisma.user.count({ where }),
+  ]);
+
+  const rows = users.map((u) => ({
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    profile: u.profile?.name ?? "—",
+    scopes: [
+      ...u.agencyMembers.map((m) => m.agency.name),
+      ...u.posMembers.map((m) => m.pointOfSale.name),
+    ],
+    active: u.active && !u.banned,
+  }));
+
+  return Response.json(formatPaginatedResponse(rows, total, { page, limit }));
+});
 
 export const POST = route(async (req: NextRequest) => {
   assertSameOrigin(req);
@@ -58,8 +130,6 @@ export const POST = route(async (req: NextRequest) => {
       email: body.email,
       password: randomPassword(),
       name: `${body.firstName} ${body.lastName}`.trim(),
-      // Le plugin admin ne whitelist que "user"/"admin" côté types ; "staff" est
-      // un rôle valide stocké tel quel à l'exécution.
       role: role as "user" | "admin",
       data: {
         firstName: body.firstName,
@@ -82,12 +152,10 @@ export const POST = route(async (req: NextRequest) => {
       ),
     ]);
   } catch {
-    // Compensation : Better Auth a déjà créé le compte hors transaction Prisma.
     await prisma.user.delete({ where: { id: userId } }).catch(() => {});
     throw new ApiError(500, "CREATE_FAILED", "Échec de l'affectation ; création annulée.");
   }
 
-  // Déclenche l'email d'invitation (template neutre) via le token de reset.
   await auth.api.requestPasswordReset({
     body: { email: body.email, redirectTo: "/nouveau-mot-de-passe" },
   });

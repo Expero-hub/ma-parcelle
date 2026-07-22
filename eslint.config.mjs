@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Outils/scripts internes de Claude, hors périmètre applicatif.
+    ".claude/**",
   ]),
 ]);
 

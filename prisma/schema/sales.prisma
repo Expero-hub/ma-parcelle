@@ -1,3 +1,112 @@
+/// Contrat de vente d'une parcelle à un client (comptant ou échelonné).
+model Contract {
+  id                String         @id @default(cuid())
+  reference         String         @unique
+  totalAmount       Decimal        @map("total_amount") @db.Decimal(15, 0)
+  status            ContractStatus @default(DRAFT)
+  periodicity       Periodicity?
+  installmentAmount Decimal?       @map("installment_amount") @db.Decimal(15, 0)
+  startDate         DateTime?      @map("start_date")
+  endDate           DateTime?      @map("end_date")
+  isValidated       Boolean        @default(false) @map("is_validated")
+  userId            String         @map("user_id")
+  parcelleId        String?        @map("parcelle_id")
+  companyId         String?        @map("company_id")
+  agencyId          String         @map("agency_id")
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  deletedAt         DateTime?
+  cancellation      Cancellation?
+  parcelle          Parcelle?      @relation(fields: [parcelleId], references: [id])
+  user              User           @relation(fields: [userId], references: [id])
+  company           Company?       @relation(fields: [companyId], references: [id])
+  agency            Agency         @relation(fields: [agencyId], references: [id])
+  installments      Installment[]
+  reservations      Reservation[]
+
+  @@index([userId])
+  @@index([parcelleId])
+  @@index([companyId])
+  @@index([agencyId])
+  @@index([status])
+  @@map("contracts")
+}
+
+/// Réservation d'une parcelle par un client (avant/pendant contractualisation).
+/// `userId` = le client qui réserve.
+model Reservation {
+  id         String            @id @default(cuid())
+  parcelleId String            @map("parcelle_id")
+  userId     String            @map("user_id")
+  contractId String            @map("contract_id")
+  status     ReservationStatus @default(PENDING)
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  deletedAt  DateTime?
+  contract   Contract          @relation(fields: [contractId], references: [id])
+  parcelle   Parcelle          @relation(fields: [parcelleId], references: [id])
+  user       User              @relation(fields: [userId], references: [id])
+
+  @@index([parcelleId])
+  @@index([userId])
+  @@index([contractId])
+  @@map("reservations")
+}
+
+/// Annulation d'une réservation et/ou d'un contrat (motif, auteur, pénalité).
+model Cancellation {
+  id            String    @id @default(cuid())
+  contractId    String?   @unique @map("contract_id")
+  reservationId String?   @map("reservation_id")
+  reason        String?
+  penaltyAmount Decimal?  @map("penalty_amount") @db.Decimal(15, 0)
+  cancelledById String?   @map("cancelled_by_id")
+  createdAt     DateTime  @default(now())
+  cancelledBy   User?     @relation("CancellationBy", fields: [cancelledById], references: [id])
+  contract      Contract? @relation(fields: [contractId], references: [id])
+
+  @@map("cancellations")
+}
+
+/// Échéance (ex-"émission") générée depuis un contrat selon sa périodicité.
+/// Chaque échéance couvre une période et attend un ou plusieurs Payment.
+model Installment {
+  id         String            @id @default(cuid())
+  reference  String            @unique
+  startDate  DateTime          @map("start_date")
+  endDate    DateTime          @map("end_date")
+  amount     Decimal           @db.Decimal(15, 0)
+  status     InstallmentStatus @default(PENDING)
+  contractId String            @map("contract_id")
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  deletedAt  DateTime?
+  contract   Contract          @relation(fields: [contractId], references: [id])
+  payments   Payment[]
+
+  @@index([contractId])
+  @@index([status])
+  @@map("installments")
+}
+
+/// Paiement (ex-"encaissement") reçu contre une échéance.
+model Payment {
+  id            String      @id @default(cuid())
+  reference     String      @unique
+  amount        Decimal     @db.Decimal(15, 0)
+  paymentDate   DateTime    @map("payment_date")
+  comment       String?
+  agencyFee     Decimal?    @map("agency_fee") @db.Decimal(15, 0)
+  installmentId String      @map("installment_id")
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  deletedAt     DateTime?
+  installment   Installment @relation(fields: [installmentId], references: [id])
+
+  @@index([installmentId])
+  @@map("payments")
+}
+
 enum ContractStatus {
   DRAFT
   ACTIVE
@@ -24,113 +133,4 @@ enum Periodicity {
   QUARTERLY
   BIANNUAL
   ANNUAL
-}
-
-/// Contrat de vente d'une parcelle à un client (comptant ou échelonné).
-model Contract {
-  id                String         @id @default(cuid())
-  reference         String         @unique
-  totalAmount       Decimal        @map("total_amount") @db.Decimal(15, 0)
-  status            ContractStatus @default(DRAFT)
-  periodicity       Periodicity?
-  installmentAmount Decimal?       @map("installment_amount") @db.Decimal(15, 0)
-  startDate         DateTime?      @map("start_date")
-  endDate           DateTime?      @map("end_date")
-  isValidated       Boolean        @default(false) @map("is_validated")
-
-  userId     String   @map("user_id")
-  user       User     @relation(fields: [userId], references: [id])
-  parcelleId String   @map("parcelle_id")
-  parcelle   Parcelle @relation(fields: [parcelleId], references: [id])
-
-  reservations Reservation[]
-  installments Installment[]
-  cancellation Cancellation?
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-
-  @@index([userId])
-  @@index([parcelleId])
-  @@index([status])
-  @@map("contracts")
-}
-
-/// Réservation d'une parcelle par un client (avant/pendant contractualisation).
-/// `userId` = le client qui réserve.
-model Reservation {
-  id         String            @id @default(cuid())
-  parcelleId String            @map("parcelle_id")
-  parcelle   Parcelle          @relation(fields: [parcelleId], references: [id])
-  userId     String            @map("user_id")
-  user       User              @relation(fields: [userId], references: [id])
-  contractId String?           @map("contract_id")
-  contract   Contract?         @relation(fields: [contractId], references: [id])
-  status     ReservationStatus @default(PENDING)
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-
-  @@index([parcelleId])
-  @@index([userId])
-  @@map("reservations")
-}
-
-/// Annulation d'une réservation et/ou d'un contrat (motif, auteur, pénalité).
-model Cancellation {
-  id            String    @id @default(cuid())
-  contractId    String?   @unique @map("contract_id")
-  contract      Contract? @relation(fields: [contractId], references: [id])
-  reservationId String?   @map("reservation_id")
-  reason        String?
-  penaltyAmount Decimal?  @map("penalty_amount") @db.Decimal(15, 0)
-  cancelledById String?   @map("cancelled_by_id")
-  cancelledBy   User?     @relation("CancellationBy", fields: [cancelledById], references: [id])
-
-  createdAt DateTime @default(now())
-
-  @@map("cancellations")
-}
-
-/// Échéance (ex-"émission") générée depuis un contrat selon sa périodicité.
-/// Chaque échéance couvre une période et attend un ou plusieurs Payment.
-model Installment {
-  id         String            @id @default(cuid())
-  reference  String            @unique
-  startDate  DateTime          @map("start_date")
-  endDate    DateTime          @map("end_date")
-  amount     Decimal           @db.Decimal(15, 0)
-  status     InstallmentStatus @default(PENDING)
-  contractId String            @map("contract_id")
-  contract   Contract          @relation(fields: [contractId], references: [id])
-  payments   Payment[]
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-
-  @@index([contractId])
-  @@index([status])
-  @@map("installments")
-}
-
-/// Paiement (ex-"encaissement") reçu contre une échéance.
-model Payment {
-  id            String      @id @default(cuid())
-  reference     String      @unique
-  amount        Decimal     @db.Decimal(15, 0)
-  paymentDate   DateTime    @map("payment_date")
-  comment       String?
-  agencyFee     Decimal?    @map("agency_fee") @db.Decimal(15, 0)
-  installmentId String      @map("installment_id")
-  installment   Installment @relation(fields: [installmentId], references: [id])
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-
-  @@index([installmentId])
-  @@map("payments")
 }

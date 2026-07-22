@@ -10,6 +10,16 @@ const nextConfig: NextConfig = {
   reactCompiler: true,
   experimental: {
     authInterrupts: true,
+    
+  },
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "ouwlhsehyplsagwsvhrs.supabase.co",
+        pathname: "/storage/v1/object/public/**",
+      },
+    ],
   },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];

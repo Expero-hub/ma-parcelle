@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(*)",
+      "PowerShell(*)",
+      "Edit(*)",
+      "Read(*)",
+      "WebFetch(*)",
+      "WebSearch"
+    ]
+  },
+  "prefersReducedMotion": false
+}

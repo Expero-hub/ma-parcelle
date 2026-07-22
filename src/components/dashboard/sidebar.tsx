@@ -65,9 +65,9 @@ export function Sidebar({
       )}
       <aside
         className={
-          "z-50 flex flex-col border-r border-border bg-surface transition-all " +
-          "max-md:fixed max-md:inset-y-0 max-md:left-0 " +
+          "fixed inset-y-0 left-0 z-50 flex flex-col border-r border-border bg-surface transition-all " +
           (mobileOpen ? "max-md:translate-x-0" : "max-md:-translate-x-full") +
+          " md:translate-x-0" +
           (collapsed ? " w-16" : " w-64")
         }
       >

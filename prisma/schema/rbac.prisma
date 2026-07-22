@@ -1,26 +1,18 @@
-enum ProfileType {
-  ADMIN
-  CLIENT
-  STAFF
-}
-
 /// Profil = rôle d'un utilisateur. ADMIN et CLIENT sont des profils système
 /// non supprimables. Les profils STAFF (gérant, gestionnaire, agent…) sont créés
 /// librement et reçoivent des permissions via ProfilePermission.
 model Profile {
-  id          String      @id @default(cuid())
+  id          String              @id @default(cuid())
   name        String
   type        ProfileType
   description String?
-  active      Boolean     @default(true)
-  isSystem    Boolean     @default(false)
-
-  users       User[]
+  active      Boolean             @default(true)
+  isSystem    Boolean             @default(false)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  deletedAt   DateTime?
   permissions ProfilePermission[]
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
+  users       User[]
 
   @@index([type])
   @@map("profiles")
@@ -28,14 +20,13 @@ model Profile {
 
 /// Regroupement logique de menus du dashboard (ex. "Administration", "Métier").
 model Module {
-  id     String  @id @default(cuid())
-  name   String
-  order  Int     @default(0)
-  active Boolean @default(true)
-  menus  Menu[]
-
+  id        String   @id @default(cuid())
+  name      String
+  order     Int      @default(0)
+  active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  menus     Menu[]
 
   @@map("modules")
 }
@@ -45,21 +36,20 @@ model Module {
 /// nul, ou sous-menu d'un autre menu si `parentId` est renseigné. (Plus de modèle
 /// SubMenu séparé.)
 model Menu {
-  id          String  @id @default(cuid())
+  id          String              @id @default(cuid())
   name        String
-  moduleId    String  @map("module_id")
-  module      Module  @relation(fields: [moduleId], references: [id])
-  parentId    String? @map("parent_id")
-  parent      Menu?   @relation("MenuChildren", fields: [parentId], references: [id])
-  children    Menu[]  @relation("MenuChildren")
+  moduleId    String              @map("module_id")
+  parentId    String?             @map("parent_id")
   icon        String?
   url         String?
-  order       Int     @default(0)
-  active      Boolean @default(true)
+  order       Int                 @default(0)
+  active      Boolean             @default(true)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  module      Module              @relation(fields: [moduleId], references: [id])
+  parent      Menu?               @relation("MenuChildren", fields: [parentId], references: [id])
+  children    Menu[]              @relation("MenuChildren")
   permissions ProfilePermission[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 
   @@index([moduleId])
   @@index([parentId])
@@ -69,21 +59,25 @@ model Menu {
 /// Permission CRUD d'un profil sur un menu (racine ou sous-menu). C'est ici que se
 /// joue "qui peut créer/voir/modifier/supprimer quoi" — y compris "qui peut créer des users".
 model ProfilePermission {
-  id        String  @id @default(cuid())
-  profileId String  @map("profile_id")
-  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  menuId    String  @map("menu_id")
-  menu      Menu    @relation(fields: [menuId], references: [id], onDelete: Cascade)
-
-  canCreate Boolean @default(false)
-  canRead   Boolean @default(false)
-  canUpdate Boolean @default(false)
-  canDelete Boolean @default(false)
-
+  id        String   @id @default(cuid())
+  profileId String   @map("profile_id")
+  menuId    String   @map("menu_id")
+  canCreate Boolean  @default(false)
+  canRead   Boolean  @default(false)
+  canUpdate Boolean  @default(false)
+  canDelete Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  menu      Menu     @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
   @@unique([profileId, menuId])
   @@index([profileId])
   @@map("profile_permissions")
+}
+
+enum ProfileType {
+  ADMIN
+  CLIENT
+  STAFF
 }

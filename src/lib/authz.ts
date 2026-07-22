@@ -48,14 +48,16 @@ function getStaffMenus(profileId: string) {
         where: { profileId, canRead: true, menu: { active: true } },
         include: { menu: true },
       });
-      return perms.map((p) => ({
-        id: p.menu.id,
-        name: p.menu.name,
-        url: p.menu.url,
-        icon: p.menu.icon,
-        parentId: p.menu.parentId,
-        can: { create: p.canCreate, read: p.canRead, update: p.canUpdate, delete: p.canDelete },
-      }));
+      return perms
+        .filter((p) => Boolean(p.menu))
+        .map((p) => ({
+          id: p.menu.id,
+          name: p.menu.name,
+          url: p.menu.url,
+          icon: p.menu.icon,
+          parentId: p.menu.parentId,
+          can: { create: p.canCreate, read: p.canRead, update: p.canUpdate, delete: p.canDelete },
+        }));
     },
     ["staff-menus", profileId],
     { tags: [`permissions:${profileId}`], revalidate: 300 },
@@ -86,11 +88,47 @@ export const getUserMenus = cache(async (): Promise<AllowedMenu[]> => {
   return getStaffMenus(user.profileId);
 });
 
-/** Menu dont l'url est le plus long préfixe du chemin. */
+// ---------------------------------------------------------------------------
+// Matching d'URL avec support des segments dynamiques ("[id]", "[slug]", ...)
+//
+// Un Menu.url peut désormais contenir des segments entre crochets, exactement
+// comme les dossiers de route Next.js (ex: "/dashboard/agences/[id]/points-de-vente").
+// Un tel segment matche n'importe quel segment réel du chemin visité.
+// ---------------------------------------------------------------------------
+
+const DYNAMIC_SEGMENT = /^\[.+\]$/;
+
+function toSegments(url: string): string[] {
+  return url.split("/").filter(Boolean);
+}
+
+function segmentMatches(patternSegment: string, pathSegment: string | undefined): boolean {
+  if (pathSegment === undefined) return false;
+  return DYNAMIC_SEGMENT.test(patternSegment) || patternSegment === pathSegment;
+}
+
+/**
+ * Vrai si `pathname` correspond exactement à `menuUrl`, ou est une sous-route
+ * de celui-ci (comportement de préfixe conservé, désormais calculé segment
+ * par segment pour pouvoir ignorer les segments dynamiques du menu).
+ */
+function urlMatchesPath(menuUrl: string, pathname: string): boolean {
+  const patternSegments = toSegments(menuUrl);
+  const pathSegments = toSegments(pathname);
+  if (patternSegments.length > pathSegments.length) return false;
+  return patternSegments.every((segment, index) => segmentMatches(segment, pathSegments[index]));
+}
+
+/**
+ * Menu dont l'url est le match le plus spécifique (le plus de segments)
+ * pour le chemin donné. Un menu à segments dynamiques ("[id]") peut donc
+ * être plus spécifique qu'un menu parent, même si sa chaîne brute est
+ * plus courte que ce que donnerait une simple comparaison de longueur.
+ */
 function matchMenu(menus: AllowedMenu[], pathname: string): AllowedMenu | undefined {
   return menus
-    .filter((m) => m.url && (pathname === m.url || pathname.startsWith(m.url + "/")))
-    .sort((a, b) => b.url!.length - a.url!.length)[0];
+    .filter((m) => m.url && urlMatchesPath(m.url, pathname))
+    .sort((a, b) => toSegments(b.url!).length - toSegments(a.url!).length)[0];
 }
 
 /**
@@ -119,6 +157,8 @@ export async function requirePermission(
 
 /**
  * ADMIN → true. Sinon vérifie le droit `action` du profil sur le menu exact `menuUrl`.
+ * `menuUrl` doit être l'URL TELLE QU'ENREGISTRÉE dans Menu.url (avec ses éventuels
+ * segments "[id]" littéraux) — pas le chemin résolu du navigateur.
  * Sert aux gardes d'API et à l'affichage conditionnel côté UI.
  */
 export async function can(

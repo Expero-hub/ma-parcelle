@@ -1,9 +1,8 @@
 /// Paire clé/valeur de configuration applicative.
 model Constant {
-  id    String @id @default(cuid())
-  key   String @unique
-  value String
-
+  id        String    @id @default(cuid())
+  key       String    @unique
+  value     String
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?

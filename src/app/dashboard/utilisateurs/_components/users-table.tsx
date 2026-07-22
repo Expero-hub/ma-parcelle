@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { MoreHorizontal } from "lucide-react";
 
 import { useRouter } from "@/hooks/use-router";
 import { useUserActions } from "@/hooks/use-user-actions";
 import { Input } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { TablePagination } from "@/components/ui/paginated-table-wrapper";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -14,6 +15,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { http } from "@/lib/http";
 
 type Row = {
   id: string;
@@ -24,25 +26,83 @@ type Row = {
   active: boolean;
 };
 
-export function UsersTable({ rows }: { rows: Row[] }) {
+export function UsersTable({
+  rows: initialRows,
+  initialTotalCount,
+  profileOptions,
+}: {
+  rows: Row[];
+  initialTotalCount: number;
+  profileOptions: string[];
+}) {
   const router = useRouter();
   const { busyId, toggleActive, remove } = useUserActions();
-  const [q, setQ] = useState("");
-  const [profile, setProfile] = useState("");
-  const [confirm, setConfirm] = useState<{ id: string; name: string; hard: boolean } | null>(null);
 
-  const profiles = useMemo(() => Array.from(new Set(rows.map((r) => r.profile))), [rows]);
-  const filtered = rows.filter(
-    (r) =>
-      (!q ||
-        r.name.toLowerCase().includes(q.toLowerCase()) ||
-        r.email.toLowerCase().includes(q.toLowerCase())) &&
-      (!profile || r.profile === profile),
-  );
+  // Pagination, Search and Filter states
+  const [rows, setRows] = useState<Row[]>(initialRows);
+  const [totalResults, setTotalResults] = useState(initialTotalCount);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [q, setQ] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [profile, setProfile] = useState("");
+
+  const [confirm, setConfirm] = useState<{ id: string; name: string; hard: boolean } | null>(null);
+  const [isFirstRender, setIsFirstRender] = useState(true);
+
+  // Debounce search query
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedQuery(q);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [q]);
+
+  // Reset to page 1 on query/filter/size changes
+  useEffect(() => {
+    if (!isFirstRender) {
+      setPage(1);
+    }
+  }, [debouncedQuery, profile, pageSize]);
+
+  // Fetch paginated data
+  useEffect(() => {
+    if (isFirstRender) {
+      setIsFirstRender(false);
+      return;
+    }
+
+    let active = true;
+    async function loadData() {
+      try {
+        const url = `/users?page=${page}&limit=${pageSize}&q=${encodeURIComponent(debouncedQuery)}&profile=${encodeURIComponent(profile)}`;
+        const res = await http.get<{
+          data: Row[];
+          meta: { total: number };
+        }>(url);
+
+        if (active) {
+          setRows(res.data.data);
+          setTotalResults(res.data.meta.total);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    loadData();
+    return () => {
+      active = false;
+    };
+  }, [page, pageSize, debouncedQuery, profile]);
+
+  const totalPages = Math.max(1, Math.ceil(totalResults / pageSize));
 
   async function onConfirmDelete() {
     if (!confirm) return;
     await remove(confirm.id, confirm.hard);
+    // Remove locally or let actions reload
+    setRows((current) => current.filter((r) => r.id !== confirm.id));
+    setTotalResults((prev) => Math.max(0, prev - 1));
     setConfirm(null);
   }
 
@@ -58,16 +118,16 @@ export function UsersTable({ rows }: { rows: Row[] }) {
         <select
           value={profile}
           onChange={(e) => setProfile(e.target.value)}
-          className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text"
+          className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
           <option value="">Tous les profils</option>
-          {profiles.map((p) => (
+          {profileOptions.map((p) => (
             <option key={p} value={p}>{p}</option>
           ))}
         </select>
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-border">
+      <div className="overflow-x-auto rounded-2xl border border-border bg-surface shadow-[var(--shadow)]">
         <table className="w-full text-left text-sm">
           <thead className="bg-surface-2 text-text-2">
             <tr>
@@ -79,17 +139,17 @@ export function UsersTable({ rows }: { rows: Row[] }) {
               <th className="px-4 py-3 text-right font-medium">Actions</th>
             </tr>
           </thead>
-          <tbody>
-            {filtered.map((r) => (
-              <tr key={r.id} className="border-t border-border">
-                <td className="px-4 py-3 text-text">{r.name}</td>
+          <tbody className="divide-y divide-border text-text">
+            {rows.map((r) => (
+              <tr key={r.id} className="transition-colors hover:bg-surface-2/60">
+                <td className="px-4 py-3 font-medium">{r.name}</td>
                 <td className="px-4 py-3 text-text-2">{r.email}</td>
                 <td className="px-4 py-3 text-text-2">{r.profile}</td>
                 <td className="px-4 py-3 text-text-2">{r.scopes.join(", ") || "—"}</td>
                 <td className="px-4 py-3">
                   <span
                     className={
-                      "rounded-full px-2 py-0.5 text-xs font-medium " +
+                      "inline-flex rounded-full px-2.5 py-1 text-xs font-medium " +
                       (r.active ? "bg-secondary/15 text-secondary" : "bg-alert/15 text-alert")
                     }
                   >
@@ -130,14 +190,23 @@ export function UsersTable({ rows }: { rows: Row[] }) {
                 </td>
               </tr>
             ))}
-            {filtered.length === 0 && (
+            {rows.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-text-2">Aucun utilisateur.</td>
+                <td colSpan={6} className="px-4 py-10 text-center text-text-2">Aucun utilisateur trouvé.</td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
+
+      <TablePagination
+        currentPage={page}
+        totalPages={totalPages}
+        totalResults={totalResults}
+        onPageChange={setPage}
+        pageSize={pageSize}
+        onPageSizeChange={setPageSize}
+      />
 
       <ConfirmDialog
         open={!!confirm}

@@ -18,7 +18,12 @@ export function Topbar({
   onOpenMobile: () => void;
 }) {
   return (
-    <header className="flex h-16 items-center justify-between border-b border-border bg-surface px-4">
+    <header
+      className={
+        "fixed top-0 right-0 left-0 z-40 flex h-16 items-center justify-between border-b border-border bg-surface px-4 transition-all " +
+        (collapsed ? "md:left-16" : "md:left-64")
+      }
+    >
       <div className="flex items-center gap-2">
         <button
           type="button"

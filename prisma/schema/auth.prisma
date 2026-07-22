@@ -2,45 +2,40 @@
 /// Table gérée par Better Auth, enrichie de champs métier + relation Profile.
 /// Le mot de passe n'est PAS ici — il vit (hashé) dans Account.
 model User {
-  id            String    @id @default(cuid())
-  name          String
-  email         String    @unique
-  emailVerified Boolean   @default(false)
-  image         String?
-  role          String?
-  banned        Boolean?  @default(false)
-  banReason     String?
-  banExpires    DateTime?
-
-  firstName   String?  @map("first_name")
-  lastName    String?  @map("last_name")
-  phone       String?
-  address     String?
-  isValidated Boolean  @default(false) @map("is_validated")
-  active      Boolean  @default(true)
-
-  profileId String  @map("profile_id")
-  profile   Profile @relation(fields: [profileId], references: [id])
-  companyId String? @map("company_id")
-  company   Company? @relation(fields: [companyId], references: [id])
-
-  createdById  String? @map("created_by_id")
-  createdBy    User?   @relation("UserCreatedBy", fields: [createdById], references: [id])
-  createdUsers User[]  @relation("UserCreatedBy")
-
-  sessions         Session[]
+  id               String              @id @default(cuid())
+  name             String
+  email            String              @unique
+  emailVerified    Boolean             @default(false)
+  image            String?
+  role             String?
+  banned           Boolean?            @default(false)
+  banReason        String?
+  banExpires       DateTime?
+  firstName        String?             @map("first_name")
+  lastName         String?             @map("last_name")
+  phone            String?
+  address          String?
+  isValidated      Boolean             @default(false) @map("is_validated")
+  active           Boolean             @default(true)
+  profileId        String              @map("profile_id")
+  companyId        String?             @map("company_id")
+  createdById      String?             @map("created_by_id")
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  deletedAt        DateTime?
   accounts         Account[]
   agencyMembers    AgencyMember[]
-  posMembers       PointOfSaleMember[]
-  parcellesCreated Parcelle[]          @relation("ParcelleCreatedBy")
-  reservations     Reservation[]
-  contracts        Contract[]
   cancellations    Cancellation[]      @relation("CancellationBy")
+  contracts        Contract[]
   importFiles      ImportFile[]
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
+  parcellesCreated Parcelle[]          @relation("ParcelleCreatedBy")
+  posMembers       PointOfSaleMember[]
+  reservations     Reservation[]
+  sessions         Session[]
+  company          Company?            @relation(fields: [companyId], references: [id])
+  createdBy        User?               @relation("UserCreatedBy", fields: [createdById], references: [id])
+  createdUsers     User[]              @relation("UserCreatedBy")
+  profile          Profile             @relation(fields: [profileId], references: [id])
 
   @@index([profileId])
   @@index([companyId])
@@ -55,10 +50,10 @@ model Session {
   ipAddress      String?
   userAgent      String?
   userId         String
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   impersonatedBy String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("sessions")
@@ -71,7 +66,6 @@ model Account {
   accountId             String
   providerId            String
   userId                String
-  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   accessToken           String?
   refreshToken          String?
   idToken               String?
@@ -81,6 +75,7 @@ model Account {
   password              String?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("accounts")
