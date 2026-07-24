@@ -1,7 +1,8 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   PRICE_RANGES,
@@ -41,10 +42,27 @@ export function ParcellesView({
   parcelles: Parcelle[];
   zoneNames?: string[];
 }) {
-  const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
+  const searchParams = useSearchParams();
+
+  const initialFilters = useMemo<Filters>(() => {
+    return {
+      ville: searchParams.get("ville") || "all",
+      statut: searchParams.get("statut") || "all",
+      surface: searchParams.get("surface") || "all",
+      prix: searchParams.get("prix") || "all",
+    };
+  }, [searchParams]);
+
+  const [filters, setFilters] = useState<Filters>(initialFilters);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+
+  // Sync state if URL search parameters change (e.g. from hero search)
+  useEffect(() => {
+    setFilters(initialFilters);
+    setPage(1);
+  }, [initialFilters]);
 
   const filtered = useMemo(
     () =>

@@ -11,6 +11,7 @@ import { resetPassword } from "@/lib/auth-client";
 import { newPasswordSchema, type NewPasswordInput } from "@/lib/validations/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Eye, EyeOff } from "lucide-react";
 
 function NouveauMotDePasseForm() {
   const router = useRouter();
@@ -18,6 +19,8 @@ function NouveauMotDePasseForm() {
   const token = params.get("token");
   const isInvite = params.get("invite") === "1";
   const [formError, setFormError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const {
     register,
     handleSubmit,
@@ -58,12 +61,42 @@ function NouveauMotDePasseForm() {
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
         <div>
           <label htmlFor="password" className="mb-1 block text-sm font-medium text-text">Mot de passe</label>
-          <Input id="password" type="password" autoComplete="new-password" {...register("password")} />
+          <div className="relative">
+            <Input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              autoComplete="new-password"
+              className="pr-10"
+              {...register("password")}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-text-2 hover:text-text cursor-pointer focus:outline-none flex items-center justify-center"
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
           {errors.password && <p className="mt-1 text-xs text-alert">{errors.password.message}</p>}
         </div>
         <div>
           <label htmlFor="confirm" className="mb-1 block text-sm font-medium text-text">Confirmer</label>
-          <Input id="confirm" type="password" autoComplete="new-password" {...register("confirm")} />
+          <div className="relative">
+            <Input
+              id="confirm"
+              type={showConfirm ? "text" : "password"}
+              autoComplete="new-password"
+              className="pr-10"
+              {...register("confirm")}
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirm(!showConfirm)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-text-2 hover:text-text cursor-pointer focus:outline-none flex items-center justify-center"
+            >
+              {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
           {errors.confirm && <p className="mt-1 text-xs text-alert">{errors.confirm.message}</p>}
         </div>
 

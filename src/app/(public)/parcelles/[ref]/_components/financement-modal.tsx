@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { Calculator, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import { Calculator, X, Phone, Mail, MapPin } from "lucide-react";
 import { fmtFCFA, type Parcelle } from "@/lib/parcelles";
 
 interface FinancementModalProps {
@@ -21,6 +22,7 @@ const FREQUENCIES: { value: Frequency; label: string; perYear: number; resultLab
 
 export function FinancementModal({ parcelle }: FinancementModalProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   const minDur = parcelle.minDuration ?? 1;
   const maxDur = parcelle.maxDuration ?? 5;
@@ -33,6 +35,21 @@ export function FinancementModal({ parcelle }: FinancementModalProps) {
     amountPerPayment: number;
     totalPayments: number;
   } | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isOpen]);
 
   const handleOpen = () => {
     setIsOpen(true);
@@ -78,15 +95,15 @@ export function FinancementModal({ parcelle }: FinancementModalProps) {
         Financer ma parcelle
       </button>
 
-      {/* Modal Backdrop — fixed, centré, ne bouge jamais même si le contenu grandit */}
-      {isOpen && (
+      {/* Modal Backdrop — fixed, centered, lock background scroll via Portal */}
+      {isOpen && mounted && createPortal(
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-xs animate-[fadeUp_.2s_ease_both]"
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4 backdrop-blur-xs"
           onClick={handleClose}
         >
-          {/* Panel — hauteur plafonnée, scroll vertical interne si le contenu dépasse */}
+          {/* Panel — capped height with internal vertical scroll */}
           <div
-            className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto overflow-x-hidden rounded-2xl border border-border bg-surface p-6 text-text shadow-2xl"
+            className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto overflow-x-hidden rounded-2xl border border-border bg-surface p-6 text-text shadow-2xl animate-[fadeUp_.2s_ease_both]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Close Icon Button */}
@@ -175,8 +192,8 @@ export function FinancementModal({ parcelle }: FinancementModalProps) {
 
             {/* Simulation Result */}
             {simulationResult && (
-              <div className="mt-6 border-t border-border pt-6 animate-[fadeUp_.3s_ease_both]">
-                <h3 className="font-display text-lg font-semibold text-primary mb-4">
+              <div className="mt-6 border-t border-border pt-6 animate-[fadeUp_.3s_ease_both] space-y-4">
+                <h3 className="font-display text-lg font-semibold text-primary">
                   Résultat de la simulation
                 </h3>
 
@@ -211,10 +228,84 @@ export function FinancementModal({ parcelle }: FinancementModalProps) {
                     </p>
                   </div>
                 </div>
+
+                {/* Contacts Info Section */}
+                <div className="pt-2 border-t border-border space-y-4">
+                  <div className="flex items-start gap-2.5 text-primary dark:text-primary/90">
+                    <Phone className="h-5 w-5 shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="font-display text-base font-bold">
+                        Contacts pour finaliser votre acquisition
+                      </h4>
+                      <p className="font-sans text-xs text-text-2 mt-0.5">
+                        Contactez nos conseillers pour commencer votre procédure d'acquisition
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    {/* Service Commercial */}
+                    <div className="flex items-start gap-3 rounded-xl border border-border bg-surface-2/40 p-4 transition-colors hover:bg-surface-2/60">
+                      <Phone className="h-5 w-5 text-primary dark:text-primary/90 shrink-0 mt-0.5" />
+                      <div>
+                        <h5 className="font-display text-sm font-bold text-text">
+                          Service Commercial
+                        </h5>
+                        <p className="font-mono text-sm font-semibold text-text mt-1">
+                          +229 01 23 45 67 89
+                        </p>
+                        <p className="font-sans text-xs text-text-2 mt-0.5">
+                          Lun-Ven: 9h-18h
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Email */}
+                    <div className="flex items-start gap-3 rounded-xl border border-border bg-surface-2/40 p-4 transition-colors hover:bg-surface-2/60">
+                      <Mail className="h-5 w-5 text-primary dark:text-primary/90 shrink-0 mt-0.5" />
+                      <div>
+                        <h5 className="font-display text-sm font-bold text-text">
+                          Email
+                        </h5>
+                        <p className="font-mono text-sm font-semibold text-text mt-1">
+                          financement@parcelles.fr
+                        </p>
+                        <p className="font-sans text-xs text-text-2 mt-0.5">
+                          Réponse sous 24h
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Agence */}
+                    <div className="flex items-start gap-3 rounded-xl border border-border bg-surface-2/40 p-4 transition-colors hover:bg-surface-2/60">
+                      <MapPin className="h-5 w-5 text-primary dark:text-primary/90 shrink-0 mt-0.5" />
+                      <div>
+                        <h5 className="font-display text-sm font-bold text-text">
+                          Agence
+                        </h5>
+                        <p className="font-sans text-sm font-semibold text-text mt-1">
+                          123 Avenue des Parcelles
+                        </p>
+                        <p className="font-sans text-xs text-text-2 mt-0.5">
+                          75001 Paris
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleClose}
+                    className="w-full rounded-xl bg-primary hover:bg-primary/90 text-white py-3.5 px-5 font-sans text-sm font-bold shadow-md transition-all active:scale-[0.98] cursor-pointer"
+                  >
+                    Fermer et contacter un conseiller
+                  </button>
+                </div>
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

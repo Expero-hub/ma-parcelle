@@ -5,10 +5,8 @@ import { useState } from "react";
 
 import { useSession } from "@/lib/auth-client";
 import {
-  MENSUALITES,
   STATUT_META,
   fmtFCFA,
-  mensualite,
   pricePerM2,
   type Parcelle,
 } from "@/lib/parcelles";
@@ -19,30 +17,12 @@ type Step = "idle" | "form" | "done";
 
 export function ReservationPanel({ p }: { p: Parcelle }) {
   const { data: session } = useSession();
-  const [comptant, setComptant] = useState(false);
   const [step, setStep] = useState<Step>("idle");
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const avail = STATUT_META[p.statut]?.avail ?? p.statut === "disponible";
-
-  const seg =
-    "flex-1 cursor-pointer rounded-lg px-[18px] py-[9px] font-sans text-[13px] font-semibold transition-all";
-  const segOn = "bg-surface text-text shadow-[var(--shadow)]";
-  const segOff = "bg-transparent text-text-2";
-
-  const pay = comptant
-    ? {
-        label: "À régler comptant",
-        value: `${fmtFCFA(p.price)} FCFA`,
-        note: "Paiement intégral à la signature du contrat.",
-      }
-    : {
-        label: "À partir de",
-        value: `${fmtFCFA(mensualite(p))} F / mois`,
-        note: `Sur ${MENSUALITES} mois, sans intérêt caché. Apport initial à définir.`,
-      };
 
   const handleReservation = async () => {
     setErrorMessage(null);
@@ -97,39 +77,6 @@ export function ReservationPanel({ p }: { p: Parcelle }) {
         </div>
 
         <div className="h-px bg-border" />
-
-        <div>
-          <div className="mb-[10px] font-sans text-[13px] font-medium text-text">
-            Mode de paiement
-          </div>
-          <div className="mb-3 flex rounded-[10px] border border-border bg-surface-2 p-1">
-            <button
-              type="button"
-              onClick={() => setComptant(true)}
-              className={`${seg} ${comptant ? segOn : segOff}`}
-            >
-              Comptant
-            </button>
-            <button
-              type="button"
-              onClick={() => setComptant(false)}
-              className={`${seg} ${!comptant ? segOn : segOff}`}
-            >
-              Échelonné
-            </button>
-          </div>
-          <div className="rounded-xl bg-surface-2 px-4 py-[14px]">
-            <div className="mb-[6px] font-sans text-xs text-text-2">
-              {pay.label}
-            </div>
-            <div className="font-mono text-xl leading-[1.1] font-semibold text-primary">
-              {pay.value}
-            </div>
-            <div className="mt-[6px] font-sans text-xs leading-[1.4] text-text-2">
-              {pay.note}
-            </div>
-          </div>
-        </div>
 
         {errorMessage && (
           <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 font-sans text-xs font-medium text-red-600 dark:text-red-400">

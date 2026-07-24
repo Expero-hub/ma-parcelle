@@ -26,6 +26,7 @@ export interface Parcelle {
   desc: string;
   minDuration?: number;
   maxDuration?: number;
+  images?: string[];
 }
 
 export interface StatutMeta {
@@ -239,7 +240,7 @@ export function parseCoord(p: Parcelle): [number, number] {
 
 /** Plages de superficie pour le filtre (m²). */
 export const SURFACE_RANGES = [
-  { value: "all", label: "Toutes surfaces", min: 0, max: Infinity },
+  { value: "all", label: "Superficie", min: 0, max: Infinity },
   { value: "0-400", label: "< 400 m²", min: 0, max: 400 },
   { value: "400-600", label: "400 – 600 m²", min: 400, max: 600 },
   { value: "600-1000", label: "600 – 1000 m²", min: 600, max: 1000 },

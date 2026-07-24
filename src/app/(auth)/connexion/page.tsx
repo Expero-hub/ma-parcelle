@@ -10,6 +10,7 @@ import { signIn, authClient } from "@/lib/auth-client";
 import { loginSchema, type LoginInput } from "@/lib/validations/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function ConnexionPage() {
   const router = useRouter();
@@ -17,6 +18,7 @@ export default function ConnexionPage() {
   // Reste vrai pendant la redirection (le composant n'est démonté qu'à l'arrivée
   // sur la nouvelle page) → empêche un second clic et garde le bouton en chargement.
   const [redirecting, setRedirecting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const {
     register,
     handleSubmit,
@@ -58,7 +60,22 @@ export default function ConnexionPage() {
               Mot de passe oublié ?
             </Link>
           </div>
-          <Input id="password" type="password" autoComplete="current-password" {...register("password")} />
+          <div className="relative">
+            <Input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              autoComplete="current-password"
+              className="pr-10"
+              {...register("password")}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-text-2 hover:text-text cursor-pointer focus:outline-none flex items-center justify-center"
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
           {errors.password && <p className="mt-1 text-xs text-alert">{errors.password.message}</p>}
         </div>
 

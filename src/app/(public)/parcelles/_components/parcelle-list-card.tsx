@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useRouter } from "@/hooks/use-router";
 import {
   STATUT_META,
@@ -44,19 +45,20 @@ export function ParcelleListCard({
       }`}
     >
       {/* vignette */}
-      <div
-        className="relative w-[112px] flex-none border-r border-border sm:w-[132px]"
-        style={{ background: HATCH }}
-      >
-        <div className="absolute inset-0 flex items-center justify-center font-mono text-[10px] text-text-2 opacity-55">
-          terrain
-        </div>
+      <div className="relative w-[112px] flex-none border-r border-border sm:w-[132px] bg-surface-2 overflow-hidden">
+        <Image
+          src={p.images && p.images.length > 0 ? p.images[0] : "/images/hero/hero4.jpg"}
+          alt={`Parcelle ${p.ref}`}
+          fill
+          sizes="(max-width: 640px) 112px, 132px"
+          className="object-cover transition-transform duration-300 group-hover:scale-105"
+        />
         <span
-          className="absolute top-2 left-2 size-3 rounded-full shadow-[0_0_0_3px_color-mix(in_srgb,var(--surface)_80%,transparent)]"
+          className="absolute top-2 left-2 size-3 rounded-full shadow-[0_0_0_3px_color-mix(in_srgb,var(--surface)_80%,transparent)] z-10"
           style={{ background: meta.color }}
         />
         {p.verifie && (
-          <span className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full bg-[color-mix(in_srgb,var(--surface)_88%,transparent)] px-2 py-1 font-mono text-[9px] font-medium tracking-[0.04em] text-gold backdrop-blur-[4px]">
+          <span className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full bg-[color-mix(in_srgb,var(--surface)_88%,transparent)] px-2 py-1 font-mono text-[9px] font-medium tracking-[0.04em] text-gold backdrop-blur-[4px] z-10">
             <span className="size-[5px] rounded-full bg-gold" />
             VÉRIFIÉ
           </span>

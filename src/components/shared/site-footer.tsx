@@ -10,24 +10,7 @@ const FOOTER_COLS = [
       { label: "FAQ", href: "#" },
     ],
   },
-  {
-    title: "Société",
-    links: [
-      { label: "À propos", href: "#" },
-      { label: "Nos garanties", href: "#" },
-      { label: "L'équipe", href: "#" },
-      { label: "Nous contacter", href: "#contact" },
-    ],
-  },
-  {
-    title: "Mon espace",
-    links: [
-      { label: "Connexion", href: "#" },
-      { label: "Créer un compte", href: "#" },
-      { label: "Suivi des paiements", href: "#" },
-      { label: "Mes documents", href: "#" },
-    ],
-  },
+  
 ];
 
 function MiniFooter() {

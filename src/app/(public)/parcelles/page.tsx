@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
 import { prisma } from "@/lib/prisma";
 import { PARCELLES, type Parcelle, type Statut } from "@/lib/parcelles";
@@ -78,6 +79,10 @@ export default async function ParcellesPage() {
     zoneNames = Array.from(new Set(parcellesList.map((p) => p.ville)));
   }
 
-  return <ParcellesView parcelles={parcellesList} zoneNames={zoneNames} />;
+  return (
+    <Suspense fallback={<div className="flex h-screen items-center justify-center font-mono text-xs text-text-2">Chargement…</div>}>
+      <ParcellesView parcelles={parcellesList} zoneNames={zoneNames} />
+    </Suspense>
+  );
 }
 

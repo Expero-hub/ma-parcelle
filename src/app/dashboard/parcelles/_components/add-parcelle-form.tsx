@@ -103,11 +103,7 @@ export function AddParcelleForm({
       }
       return pts;
     }
-    return [
-      { lng: 2.420463, lat: 6.371539 },
-      { lng: 2.422463, lat: 6.371539 },
-      { lng: 2.421463, lat: 6.373539 },
-    ];
+    return [];
   }, [initialData]);
 
   const {
@@ -138,8 +134,13 @@ export function AddParcelleForm({
   });
 
   const zoneId = watch("zoneId");
+  const pointOfSaleId = watch("pointOfSaleId");
   const points = watch("points") ?? [];
   const selectedZone = useMemo(() => zones.find((z) => z.id === zoneId), [zoneId, zones]);
+  const selectedPointOfSale = useMemo(
+    () => pointsOfSale.find((p) => p.id === pointOfSaleId),
+    [pointOfSaleId, pointsOfSale]
+  );
 
   // Handle multi-image upload
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -324,21 +325,47 @@ export function AddParcelleForm({
           </div>
 
           <div>
-            <label className={labelCls} htmlFor="pointOfSaleId">
-              Point de vente
-            </label>
-            <select
-              id="pointOfSaleId"
-              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text outline-none focus-visible:ring-2 focus-visible:ring-primary"
-              {...register("pointOfSaleId")}
-            >
-              <option value="">Sélectionnez votre point de vente</option>
-              {pointsOfSale.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
+            <label className={labelCls}>Point de vente</label>
+            <Popover>
+              <PopoverTrigger
+                render={
+                  <button
+                    type="button"
+                    role="combobox"
+                    className="flex h-10 w-full items-center justify-between rounded-lg border border-border bg-surface px-3 text-left text-sm text-text font-medium"
+                  />
+                }
+              >
+                <span className="truncate">
+                  {selectedPointOfSale
+                    ? selectedPointOfSale.name
+                    : "Sélectionnez votre point de vente"}
+                </span>
+                <ChevronsUpDown className="h-4 w-4 shrink-0 text-text-2" />
+              </PopoverTrigger>
+              <PopoverContent align="start" className="w-(--anchor-width) min-w-72 p-0">
+                <Command>
+                  <CommandInput placeholder="Rechercher un point de vente..." />
+                  <CommandList className="max-h-56">
+                    <CommandEmpty>Aucun point de vente trouvé.</CommandEmpty>
+                    <CommandGroup>
+                      {pointsOfSale.map((p) => (
+                        <CommandItem
+                          key={p.id}
+                          value={p.name}
+                          onSelect={() => setValue("pointOfSaleId", p.id, { shouldValidate: true })}
+                        >
+                          <Check
+                            className={cn("h-4 w-4 mr-2", pointOfSaleId === p.id ? "opacity-100" : "opacity-0")}
+                          />
+                          {p.name}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
             {errors.pointOfSaleId && <p className={errCls}>{errors.pointOfSaleId.message}</p>}
           </div>
 
@@ -459,7 +486,7 @@ export function AddParcelleForm({
                     >
                       <MapPin className="h-4 w-4" />
                     </Button>
-                    {fields.length > 3 && (
+                    {/* {fields.length > 3 && ( */}
                       <Button
                         type="button"
                         variant="outline"
@@ -470,7 +497,7 @@ export function AddParcelleForm({
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
-                    )}
+                    {/* )} */}
                   </div>
                 </div>
               ))}

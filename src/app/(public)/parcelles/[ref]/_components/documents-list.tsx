@@ -23,24 +23,14 @@ export function DocumentsList({ p }: { p: Parcelle }) {
             className="flex items-center gap-3 rounded-xl border border-border bg-surface px-4 py-[13px]"
           >
             <span
-              className={`flex size-[26px] flex-none items-center justify-center rounded-full ${
-                d.ok
-                  ? "bg-secondary text-white"
-                  : "border border-border bg-surface-2"
-              }`}
+              className="flex size-[26px] flex-none items-center justify-center rounded-full bg-secondary text-white"
             >
-              {d.ok && <Check className="size-[14px]" strokeWidth={3} />}
+             <Check className="size-[14px]" strokeWidth={3} />
             </span>
             <span className="flex-1 font-sans text-[14.5px] leading-[1.3] font-medium text-text">
               {d.name}
             </span>
-            <span
-              className={`font-mono text-[11px] font-medium ${
-                d.ok ? "text-secondary" : "text-text-2"
-              }`}
-            >
-              {d.ok ? "Disponible" : "En cours"}
-            </span>
+            
           </div>
         ))}
       </div>
