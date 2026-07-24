@@ -29,7 +29,10 @@ export default async function Home() {
         orderBy: { commune: "asc" },
       }),
     ]);
-    latestParcelles = dbParcelles;
+      latestParcelles = dbParcelles.map((p) => ({
+      ...p,
+      price: Number(p.price),
+    }));
 
     const zoneSet = new Set<string>();
     dbZones.forEach((z) => {

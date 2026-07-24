@@ -75,28 +75,127 @@ export function EtatsClient({
   // PDF Export trigger (primary themed direct PDF download)
   const handleDownloadPDF = () => {
     const runExport = () => {
-      const element = document.getElementById("pdf-report-template");
-      if (!element) return;
+      // Create a wrapper container with height 0 and overflow hidden to hide it from the user
+      // but keeping position relative/absolute at left 0 for html2canvas clone alignment
+      const container = document.createElement("div");
+      container.style.height = "0";
+      container.style.overflow = "hidden";
+      container.style.position = "absolute";
+      container.style.top = "0";
+      container.style.left = "0";
+
+      const element = document.createElement("div");
+      element.style.width = "794px"; // A4 width at 96 DPI
+      element.style.height = "auto";
+      element.style.overflow = "visible";
+      element.style.opacity = "1";
+      element.style.pointerEvents = "none";
+      element.style.backgroundColor = "#fffdf9";
+      element.style.padding = "40px";
+      element.style.fontFamily = "sans-serif";
+      element.style.color = "#22201d";
+      element.style.boxSizing = "border-box";
+
+      const rowsHtml = initialEncaissements.map((item) => `
+        <tr style="border-bottom: 1px solid rgba(177, 80, 47, 0.15); page-break-inside: avoid; break-inside: avoid;">
+          <td style="padding: 12px 10px; font-size: 11px; font-family: sans-serif; color: #22201d;">${item.paymentDateFormatted}</td>
+          <td style="padding: 12px 10px; font-size: 11px; font-family: sans-serif; font-weight: bold; color: #b1502f;">${fmtFCFA(item.amount)} FCFA</td>
+          <td style="padding: 12px 10px; font-size: 11px; font-family: sans-serif; font-weight: bold; color: #22201d;">${item.contractRef}</td>
+          <td style="padding: 12px 10px; font-size: 11px; color: #5a554c;">${item.contractStartFormatted}</td>
+          <td style="padding: 12px 10px; font-size: 11px; color: #5a554c;">${item.contractEndFormatted}</td>
+          <td style="padding: 12px 10px; font-size: 11px; color: #22201d;">${item.emissionRef}</td>
+          <td style="padding: 12px 10px; font-size: 11px; color: #5a554c;">${fmtFCFA(item.emissionAmount)}</td>
+          <td style="padding: 12px 10px; font-size: 11px; color: #22201d;">${item.clientName}</td>
+        </tr>
+      `).join("");
+
+      element.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 25px; font-family: sans-serif;">
+          <div style="font-size: 24px; font-weight: bold; color: #b1502f;">Votre Entreprise</div>
+          <div style="text-align: right; font-size: 11px; color: #5a554c; line-height: 1.5;">
+            Adresse complète<br/>
+            Téléphone : 00 00 00 00<br/>
+            Email : contact@entreprise.com
+          </div>
+        </div>
+        <div style="height: 3px; background-color: #b1502f; margin-bottom: 25px;"></div>
+        <div style="text-align: center; font-size: 20px; font-weight: bold; color: #22201d; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; font-family: sans-serif;">État des encaissements</div>
+        <div style="text-align: center; font-size: 12px; color: #5a554c; margin-bottom: 25px; font-family: sans-serif;">Période : ${startDate ? `du ${startDateFormatted}` : ""} ${endDate ? `au ${endDateFormatted}` : ""}</div>
+        
+        <div style="background-color: rgba(177, 80, 47, 0.05); border-left: 4px solid #b1502f; padding: 15px; border-radius: 4px; margin-bottom: 25px; font-family: sans-serif;">
+          <div style="font-size: 13px; color: #5a554c; margin-bottom: 4px;">Nombre d'encaissements : <span style="font-weight: bold; color: #b1502f;">${initialEncaissements.length}</span></div>
+          <div style="font-size: 13px; color: #5a554c;">Total encaissé : <span style="font-weight: bold; color: #b1502f;">${fmtFCFA(totalAmount)} FCFA</span></div>
+        </div>
+
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px; font-family: sans-serif;">
+          <thead>
+            <tr style="background-color: #b1502f; color: #fffdf9;">
+              <th style="padding: 10px; font-size: 10px; text-transform: uppercase; font-weight: bold; text-align: left;">Date d'encaissement</th>
+              <th style="padding: 10px; font-size: 10px; text-transform: uppercase; font-weight: bold; text-align: left;">Montant</th>
+              <th style="padding: 10px; font-size: 10px; text-transform: uppercase; font-weight: bold; text-align: left;">Contrat</th>
+              <th style="padding: 10px; font-size: 10px; text-transform: uppercase; font-weight: bold; text-align: left;">Effet contrat</th>
+              <th style="padding: 10px; font-size: 10px; text-transform: uppercase; font-weight: bold; text-align: left;">Echéance contrat</th>
+              <th style="padding: 10px; font-size: 10px; text-transform: uppercase; font-weight: bold; text-align: left;">Emission</th>
+              <th style="padding: 10px; font-size: 10px; text-transform: uppercase; font-weight: bold; text-align: left;">Montant émission</th>
+              <th style="padding: 10px; font-size: 10px; text-transform: uppercase; font-weight: bold; text-align: left;">Client</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
+        </table>
+
+        <div style="text-align: right; font-size: 16px; font-weight: bold; color: #b1502f; border-top: 2px solid #b1502f; padding-top: 10px; font-family: sans-serif; page-break-inside: avoid; break-inside: avoid;">
+          Total encaissé : ${fmtFCFA(totalAmount)} FCFA
+        </div>
+      `;
+
+      container.appendChild(element);
+      document.body.appendChild(container);
 
       const pdfFilename = startDate && endDate
         ? `Etat_des_encaissements_${startDate}_to_${endDate}.pdf`
         : "Etat_des_encaissements.pdf";
 
       const opt = {
-        margin:       10,
+        margin:       0,
         filename:     pdfFilename,
         image:        { type: "jpeg", quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true },
-        jsPDF:        { unit: "mm", format: "a4", orientation: "portrait" }
+        html2canvas:  { 
+          scale: 2, 
+          useCORS: true, 
+          logging: false
+        },
+        jsPDF:        { unit: "mm", format: "a4", orientation: "portrait" },
+        pagebreak:    { mode: ["css", "legacy"] }
       };
 
-      (window as any).html2pdf().from(element).set(opt).save();
+      const worker = (window as any).html2pdf().from(element).set(opt).save();
+
+      // Cleanup container node after save completion
+      const cleanup = () => {
+        if (document.body.contains(container)) {
+          document.body.removeChild(container);
+        }
+      };
+
+      if (worker && typeof worker.then === "function") {
+        worker.then(cleanup).catch((err: any) => {
+          console.error("PDF generation error:", err);
+          cleanup();
+        });
+      } else {
+        setTimeout(cleanup, 2000);
+      }
     };
 
     if (!(window as any).html2pdf) {
       const script = document.createElement("script");
       script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
       script.onload = runExport;
+      script.onerror = (err) => {
+        console.error("Failed to load html2pdf script:", err);
+      };
       document.head.appendChild(script);
     } else {
       runExport();
@@ -369,74 +468,6 @@ export function EtatsClient({
               <ChevronsRight className="h-3.5 w-3.5" />
             </button>
           </div>
-        </div>
-      </div>
-
-      {/* Hidden Print Container for PDF Export */}
-      <div
-        id="pdf-report-template"
-        className="absolute -left-[9999px] -top-[9999px] w-[794px] bg-[#fffdf9] p-10 text-[#22201d] font-sans"
-      >
-        <div className="flex justify-between items-start mb-6">
-          <div className="text-2xl font-bold text-primary font-serif">
-            Votre Entreprise
-          </div>
-          <div className="text-right text-[11px] text-text-2 leading-relaxed">
-            Adresse complète<br />
-            Téléphone : 00 00 00 00<br />
-            Email : contact@entreprise.com
-          </div>
-        </div>
-
-        <div className="h-0.5 bg-primary w-full mb-6" />
-
-        <h1 className="text-center text-xl font-bold uppercase tracking-wider mb-2">
-          État des encaissements
-        </h1>
-        <p className="text-center text-xs text-text-2 mb-6">
-          Période : {startDate ? `du ${startDateFormatted}` : ""} {endDate ? `au ${endDateFormatted}` : ""}
-        </p>
-
-        <div className="bg-primary/5 border-l-4 border-primary p-4 rounded-r-lg mb-6">
-          <div className="text-xs text-text-2">
-            Nombre d'encaissements : <span className="font-bold text-primary">{initialEncaissements.length}</span>
-          </div>
-          <div className="text-xs text-text-2 mt-1">
-            Total encaissé : <span className="font-bold text-primary">{fmtFCFA(totalAmount)} FCFA</span>
-          </div>
-        </div>
-
-        <table className="w-full text-left text-[11px] border-collapse mb-8">
-          <thead>
-            <tr className="bg-primary text-white font-bold">
-              <th className="p-3">Date d'encaissement</th>
-              <th className="p-3">Montant</th>
-              <th className="p-3">Contrat</th>
-              <th className="p-3">Effet contrat</th>
-              <th className="p-3">Echéance contrat</th>
-              <th className="p-3">Emission</th>
-              <th className="p-3">Montant émission</th>
-              <th className="p-3">Client</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-primary/10">
-            {initialEncaissements.map((item) => (
-              <tr key={item.id} className="border-b border-primary/5">
-                <td className="p-3">{item.paymentDateFormatted}</td>
-                <td className="p-3 font-bold text-primary">{fmtFCFA(item.amount)} FCFA</td>
-                <td className="p-3 font-bold">{item.contractRef}</td>
-                <td className="p-3 text-text-2">{item.contractStartFormatted}</td>
-                <td className="p-3 text-text-2">{item.contractEndFormatted}</td>
-                <td className="p-3">{item.emissionRef}</td>
-                <td className="p-3 text-text-2">{fmtFCFA(item.emissionAmount)}</td>
-                <td className="p-3">{item.clientName}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        <div className="text-right text-base font-bold text-primary border-t-2 border-primary pt-3">
-          Total encaissé : {fmtFCFA(totalAmount)} FCFA
         </div>
       </div>
     </div>
