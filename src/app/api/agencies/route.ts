@@ -19,7 +19,8 @@ async function requireSession() {
 }
 
 async function getScopedAgencyWhere(user: ScopedUser) {
-  if ((user.role ?? "user") === "admin") return { deletedAt: null };
+  const role = user.role ?? "user";
+  if (role === "admin" || role === "staff") return { deletedAt: null };
   const agencyIds = (await getScopedAgencyIds(user)) ?? [];
   return { deletedAt: null, id: { in: agencyIds } };
 }

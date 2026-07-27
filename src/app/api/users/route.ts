@@ -47,10 +47,21 @@ export const GET = route(async (req: NextRequest) => {
   }
 
   if (search) {
-    where.OR = [
-      { name: { contains: search, mode: "insensitive" } },
-      { email: { contains: search, mode: "insensitive" } },
-    ];
+    const searchFilter = {
+      OR: [
+        { name: { contains: search, mode: "insensitive" } },
+        { email: { contains: search, mode: "insensitive" } },
+      ],
+    };
+    if (scopedWhere.OR) {
+      where.AND = [
+        { OR: scopedWhere.OR },
+        searchFilter,
+      ];
+      delete where.OR;
+    } else {
+      where.OR = searchFilter.OR;
+    }
   }
 
   const [users, total] = await Promise.all([
@@ -98,7 +109,9 @@ export const POST = route(async (req: NextRequest) => {
   }
 
   const creator = session.user;
-  const creatorIsAdmin = (creator.role ?? "user") === "admin";
+  const creatorRole = creator.role ?? "user";
+  const isCreatorAdmin = creatorRole === "admin";
+  const isCreatorAdminOrStaff = creatorRole === "admin" || creatorRole === "staff";
   const body = createUserSchema.parse(await req.json());
 
   const profile = await prisma.profile.findUnique({
@@ -110,10 +123,11 @@ export const POST = route(async (req: NextRequest) => {
   }
   const role = profile.type === "ADMIN" ? "admin" : profile.type === "STAFF" ? "staff" : "user";
 
-  if (!creatorIsAdmin) {
-    if (profile.type === "ADMIN") {
-      throw new ApiError(403, "NO_ESCALATION", "Vous ne pouvez pas créer d'administrateur.");
-    }
+  if (profile.type === "ADMIN" && !isCreatorAdmin) {
+    throw new ApiError(403, "NO_ESCALATION", "Vous ne pouvez pas créer d'administrateur.");
+  }
+
+  if (!isCreatorAdminOrStaff) {
     await assertWithinScope(creator, {
       agencyIds: body.agencyIds,
       pointOfSaleIds: body.pointOfSaleIds,

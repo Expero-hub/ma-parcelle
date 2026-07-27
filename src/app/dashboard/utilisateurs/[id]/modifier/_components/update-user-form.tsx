@@ -110,7 +110,7 @@ export function UpdateUserForm({
       });
 
       const redirectPath = selectedProfile?.type === "CLIENT" 
-        ? "/dashboard/utilisateurs/clients" 
+        ? "/dashboard/clients" 
         : "/dashboard/utilisateurs";
       
       router.push(redirectPath);
@@ -229,7 +229,7 @@ export function UpdateUserForm({
           variant="outline"
           onClick={() => {
             const redirectPath = selectedProfile?.type === "CLIENT" 
-              ? "/dashboard/utilisateurs/clients" 
+              ? "/dashboard/clients" 
               : "/dashboard/utilisateurs";
             router.push(redirectPath);
           }}

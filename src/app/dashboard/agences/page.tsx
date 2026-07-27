@@ -4,7 +4,8 @@ import { getScopedAgencyIds, type ScopedUser } from "@/lib/scope";
 import { AgenciesBoard } from "@/app/dashboard/agences/_components/agencies-board";
 
 async function getAgencyWhere(user: ScopedUser) {
-  if ((user.role ?? "user") === "admin") return { deletedAt: null };
+  const role = user.role ?? "user";
+  if (role === "admin" || role === "staff") return { deletedAt: null };
   const agencyIds = (await getScopedAgencyIds(user)) ?? [];
   return { deletedAt: null, id: { in: agencyIds } };
 }

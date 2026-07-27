@@ -31,8 +31,19 @@ export function UserMenu({ name }: { name: string }) {
       >
         {initials(name)}
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={onSignOut}>Se déconnecter</DropdownMenuItem>
+      <DropdownMenuContent align="end" className="w-[160px] p-1">
+        <DropdownMenuItem 
+          onClick={() => router.push("/mon-compte")}
+          className="cursor-pointer font-medium"
+        >
+          Mon compte
+        </DropdownMenuItem>
+        <DropdownMenuItem 
+          onClick={onSignOut}
+          className="cursor-pointer text-alert focus:text-alert font-medium"
+        >
+          Se déconnecter
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

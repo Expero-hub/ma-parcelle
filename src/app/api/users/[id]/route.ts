@@ -116,10 +116,15 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     }
     const role = profile.type === "ADMIN" ? "admin" : profile.type === "STAFF" ? "staff" : "user";
 
-    if (!requesterIsAdmin) {
-      if (profile.type === "ADMIN") {
-        throw new ApiError(403, "NO_ESCALATION", "Vous ne pouvez pas affecter le profil administrateur.");
-      }
+    const requesterRole = requester.role ?? "user";
+    const isRequesterAdmin = requesterRole === "admin";
+    const isRequesterAdminOrStaff = requesterRole === "admin" || requesterRole === "staff";
+
+    if (profile.type === "ADMIN" && !isRequesterAdmin) {
+      throw new ApiError(403, "NO_ESCALATION", "Vous ne pouvez pas affecter le profil administrateur.");
+    }
+
+    if (!isRequesterAdminOrStaff) {
       await assertWithinScope(requester, {
         agencyIds: body.agencyIds,
       });

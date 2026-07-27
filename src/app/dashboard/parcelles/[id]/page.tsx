@@ -35,21 +35,31 @@ export default async function ParcelleDetailPage({ params }: PageProps) {
         include: { agency: true },
       },
       images: { orderBy: { order: "asc" } },
-      contracts: {
-        where: { deletedAt: null, status: { not: "CANCELLED" } },
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              phone: true,
-              createdAt: true,
-            },
+      reservations: {
+        where: {
+          deletedAt: null,
+          contract: {
+            deletedAt: null,
+            status: { not: "CANCELLED" },
           },
-          installments: {
-            include: { payments: true },
-            orderBy: { startDate: "asc" },
+        },
+        include: {
+          contract: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  phone: true,
+                  createdAt: true,
+                },
+              },
+              installments: {
+                include: { payments: true },
+                orderBy: { startDate: "asc" },
+              },
+            },
           },
         },
         orderBy: { createdAt: "desc" },
@@ -79,7 +89,7 @@ export default async function ParcelleDetailPage({ params }: PageProps) {
   let totalPaid = 0;
   let totalContractAmount = 0;
 
-  const activeContract = parcelle.contracts[0];
+  const activeContract = parcelle.reservations?.[0]?.contract;
   if (activeContract) {
     totalContractAmount = Number(activeContract.totalAmount);
     for (const inst of activeContract.installments) {

@@ -111,11 +111,11 @@ export function EtatsClient({
 
       element.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 25px; font-family: sans-serif;">
-          <div style="font-size: 24px; font-weight: bold; color: #b1502f;">Votre Entreprise</div>
+          <div style="font-size: 24px; font-weight: bold; color: #b1502f;">Ma parcelle</div>
           <div style="text-align: right; font-size: 11px; color: #5a554c; line-height: 1.5;">
-            Adresse complète<br/>
-            Téléphone : 00 00 00 00<br/>
-            Email : contact@entreprise.com
+            Cotonou - Bénin <br/>
+            Téléphone : 96 00 12 04<br/>
+            Email : contact@fcelohim.com
           </div>
         </div>
         <div style="height: 3px; background-color: #b1502f; margin-bottom: 25px;"></div>

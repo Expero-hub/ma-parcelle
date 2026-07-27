@@ -6,13 +6,14 @@ import { ApiError } from "@/lib/api/errors";
 
 export type ScopedUser = { id: string; role?: string | null; profileId: string };
 
-function isAdmin(user: ScopedUser): boolean {
-  return (user.role ?? "user") === "admin";
+function isAdminOrStaff(user: ScopedUser): boolean {
+  const role = user.role ?? "user";
+  return role === "admin" || role === "staff";
 }
 
-/** Agences dont l'utilisateur est membre direct. ADMIN → null (toutes). */
+/** Agences dont l'utilisateur est membre direct. ADMIN/STAFF → null (toutes). */
 export const getScopedAgencyIds = cache(async (user: ScopedUser): Promise<string[] | null> => {
-  if (isAdmin(user)) return null;
+  if (isAdminOrStaff(user)) return null;
   const members = await prisma.agencyMember.findMany({
     where: { userId: user.id },
     select: { agencyId: true },
@@ -20,9 +21,9 @@ export const getScopedAgencyIds = cache(async (user: ScopedUser): Promise<string
   return members.map((m) => m.agencyId);
 });
 
-/** PDV membres directs + tous les PDV des agences de l'utilisateur. ADMIN → null. */
+/** PDV membres directs + tous les PDV des agences de l'utilisateur. ADMIN/STAFF → null. */
 export const getScopedPointOfSaleIds = cache(async (user: ScopedUser): Promise<string[] | null> => {
-  if (isAdmin(user)) return null;
+  if (isAdminOrStaff(user)) return null;
   const agencyIds = (await getScopedAgencyIds(user)) ?? [];
   const [direct, viaAgency] = await Promise.all([
     prisma.pointOfSaleMember.findMany({ where: { userId: user.id }, select: { pointOfSaleId: true } }),
@@ -33,9 +34,9 @@ export const getScopedPointOfSaleIds = cache(async (user: ScopedUser): Promise<s
   return Array.from(new Set([...direct.map((d) => d.pointOfSaleId), ...viaAgency.map((p) => p.id)]));
 });
 
-/** Clause Prisma « users du périmètre ». ADMIN → {} (aucun filtre). */
+/** Clause Prisma « users du périmètre ». ADMIN/STAFF → {} (aucun filtre). */
 export async function getScopedUserWhere(user: ScopedUser): Promise<Prisma.UserWhereInput> {
-  if (isAdmin(user)) return {};
+  if (isAdminOrStaff(user)) return {};
   const [agencyIds, posIds] = await Promise.all([
     getScopedAgencyIds(user),
     getScopedPointOfSaleIds(user),
@@ -44,16 +45,28 @@ export async function getScopedUserWhere(user: ScopedUser): Promise<Prisma.UserW
     OR: [
       { agencyMembers: { some: { agencyId: { in: agencyIds ?? [] } } } },
       { posMembers: { some: { pointOfSaleId: { in: posIds ?? [] } } } },
+      {
+        reservations: {
+          some: {
+            parcelle: {
+              OR: [
+                { pointOfSale: { agencyId: { in: agencyIds ?? [] } } },
+                { pointOfSaleId: { in: posIds ?? [] } },
+              ],
+            },
+          },
+        },  
+      },
     ],
   };
 }
 
-/** Lève 403 si une affectation sort du périmètre (ignoré pour ADMIN). */
+/** Lève 403 si une affectation sort du périmètre (ignoré pour ADMIN/STAFF). */
 export async function assertWithinScope(
   user: ScopedUser,
   sel: { agencyIds?: string[]; pointOfSaleIds?: string[] },
 ): Promise<void> {
-  if (isAdmin(user)) return;
+  if (isAdminOrStaff(user)) return;
   const [agencyIds, posIds] = await Promise.all([
     getScopedAgencyIds(user),
     getScopedPointOfSaleIds(user),

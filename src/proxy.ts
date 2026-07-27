@@ -37,5 +37,5 @@ export function proxy(request: NextRequest) {
 // Ne fait tourner le proxy que sur les zones protégées (dashboard + espace client).
 // Les routes publiques (accueil, /parcelles, /connexion…) ne sont pas concernées.
 export const config = {
-  matcher: ["/dashboard/:path*", "/mon-espace/:path*"],
+  matcher: ["/dashboard/:path*", "/mon-espace/:path*", "/mon-compte"],
 };
