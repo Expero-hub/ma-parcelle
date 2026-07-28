@@ -89,11 +89,11 @@ export function ContratsTable({
   const formatDate = (dateStr?: string | null) => {
     if (!dateStr) return "—";
     try {
-      return new Date(dateStr).toLocaleDateString("fr-FR", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      });
+      const d = new Date(dateStr);
+      const day = String(d.getUTCDate()).padStart(2, "0");
+      const month = String(d.getUTCMonth() + 1).padStart(2, "0");
+      const year = d.getUTCFullYear();
+      return `${day}/${month}/${year}`;
     } catch {
       return dateStr;
     }

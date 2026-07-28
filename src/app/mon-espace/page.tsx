@@ -235,7 +235,7 @@ export default async function MonEspacePage() {
                   <div>
                     <span className="text-text-2 block mb-0.5">Superficie</span>
                     <span className="font-mono font-semibold text-text">
-                      {lastReservation.parcelle.area} m²
+                      {Number(lastReservation.parcelle.area)} m²
                     </span>
                   </div>
                 </div>

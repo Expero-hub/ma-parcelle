@@ -29,9 +29,23 @@ export default async function Home() {
         orderBy: { commune: "asc" },
       }),
     ]);
-      latestParcelles = dbParcelles.map((p) => ({
-      ...p,
+
+    latestParcelles = dbParcelles.map((p) => ({
+      id: p.id,
+      reference: p.reference,
+      status: p.status,
+      area: Number(p.area),
       price: Number(p.price),
+      zone: p.zone
+        ? {
+            district: p.zone.district,
+            commune: p.zone.commune,
+            department: p.zone.department,
+          }
+        : null,
+      images: p.images.map((img) => ({
+        path: img.path,
+      })),
     }));
 
     const zoneSet = new Set<string>();
