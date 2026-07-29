@@ -67,8 +67,21 @@ function erf(x: number): number {
  * Fonction de répartition de la loi normale centrée réduite N(0,1).
  * Équivalent Excel : NORM.S.DIST(x, TRUE)
  */
-function normaleStandard(x: number): number {
+function normaleStandard_old(x: number): number {
   return 0.5 * (1 + erf(x / Math.SQRT2));
+}
+
+function normaleStandard(x: number): number {
+  const t = 1 / (1 + 0.2316419 * Math.abs(x));
+  const d = 0.3989423 * Math.exp((-x * x) / 2);
+
+  const p =
+    d *
+    t *
+    (0.3193815 +
+      t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
+
+  return x >= 0 ? 1 - p : p;
 }
 
 /**
