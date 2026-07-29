@@ -175,7 +175,7 @@ function calculerPrimeParcelle(
   const PAC = PAI / (1 - fa);
   const a_m = (1 - v) / (1 - Math.pow(v, 1 / freq));
 
-  return PAC;
+  return P_epargne;
   // return PAC / a_m;
 }
 
