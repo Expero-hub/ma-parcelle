@@ -102,7 +102,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
       }
 
       // Format installments (echeancier)
-      const installments = activeContract.installments.map((inst) => {
+      const installments = activeContract.installments.map((inst: any) => {
         let instPaid = 0;
         for (const pay of inst.payments) {
           instPaid += Number(pay.amount);

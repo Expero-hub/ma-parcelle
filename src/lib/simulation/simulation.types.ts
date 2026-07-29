@@ -70,6 +70,8 @@ export interface SimulationClientInput {
    *  true  -> le taux fraisMutation de la parcelle est appliqué
    *  false -> fm is forced to 0 (note G23 du xlsm) */
   priseEnChargeFraisMutation: boolean;
+  /** Option Garantie en cas de décès */
+  garantieDeces?: boolean;
 }
 
 export interface SimulationInput {

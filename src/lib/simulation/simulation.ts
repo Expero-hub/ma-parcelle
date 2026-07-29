@@ -116,6 +116,7 @@ function calculerPrimeParcelle(
   fg: number,
   fa: number,
   freq: number,
+  garantieDeces: boolean,
 ): number {
   const v = 1 / (1 + it);
   const L = TABLE_MORTALITE;
@@ -152,19 +153,21 @@ function calculerPrimeParcelle(
 
   // === Prime Décès ===
   let PUP_deces = 0;
-  for (let ki = 0; ki < t; ki++) {
-    // NOTE: reproduit tel quel le comportement du VBA d'origine.
-    // À ki = 0, cela accède à L[x - 1] (index précédent l'âge x),
-    // exactement comme "L(x + ki - 1)" en VBA lorsque ki = 0.
-    const qx = L[x + ki - 1] / L[x + ki] - 1;
-    let kPx = L[x + ki] / L[x];
-    if (ki === 0) {
-      kPx = 1;
+  if (garantieDeces) {
+    for (let ki = 0; ki < t; ki++) {
+      // NOTE: reproduit tel quel le comportement du VBA d'origine.
+      // À ki = 0, cela accède à L[x - 1] (index précédent l'âge x),
+      // exactement comme "L(x + ki - 1)" en VBA lorsque ki = 0.
+      const qx = L[x + ki - 1] / L[x + ki] - 1;
+      let kPx = L[x + ki] / L[x];
+      if (ki === 0) {
+        kPx = 1;
+      }
+
+      const pv_future_primes = (P_epargne / a_t) * renteCertaine(it, t - ki);
+
+      PUP_deces += kPx * qx * Math.pow(v, ki + 0.5) * pv_future_primes;
     }
-
-    const pv_future_primes = (P_epargne / a_t) * renteCertaine(it, t - ki);
-
-    PUP_deces += kPx * qx * Math.pow(v, ki + 0.5) * pv_future_primes;
   }
 
   const PUI = (P_epargne + P_call + PUP_deces + P_mutation) / (1 - fg);
@@ -188,6 +191,9 @@ function validerInput(parcelle: SimulationParcelleParams, client: SimulationClie
   }
   if (!Number.isInteger(client.age) || client.age < 0 || client.age + client.dureeAnnees >= 110) {
     throw new Error("L'âge du client combiné à la durée dépasse la table de mortalité disponible.");
+  }
+  if (client.garantieDeces && client.age + client.dureeAnnees > 70) {
+    throw new Error("Vous ne pouvez pas souscrire à une garantie de décès.");
   }
   const frequencesValides: FrequencePaiement[] = [1, 2, 4, 12];
   if (!frequencesValides.includes(client.frequencePaiement)) {
@@ -244,7 +250,20 @@ export function simulerPrimeParcelle(input: SimulationInput): SimulationResult {
   const fg = parcelle.fraisGestion;
   const fa = parcelle.fraisAcquisition;
 
-  const primeParEcheance = calculerPrimeParcelle(S0, k, t, r, sigma, fm, x, it, fg, fa, freq);
+  const primeParEcheance = calculerPrimeParcelle(
+    S0,
+    k,
+    t,
+    r,
+    sigma,
+    fm,
+    x,
+    it,
+    fg,
+    fa,
+    freq,
+    client.garantieDeces ?? false,
+  );
 
   const nombreEcheancesTotal = t * freq;
   const coutTotalEstime = primeParEcheance * nombreEcheancesTotal;
@@ -261,7 +280,45 @@ export function simulerPrimeParcelle(input: SimulationInput): SimulationResult {
 }
 
 function arrondi(valeur: number): number {
-  return Math.round(valeur * 100) / 100;
+  return Math.round(valeur / 100) * 100;
+}
+
+/**
+ * Calcule le prix simulé d'affichage pour une parcelle.
+ * Ce prix simule un contrat sur la durée maximale de 7 ans,
+ * avec garantie de décès activée (pour un âge de référence de 35 ans),
+ * mensuelle, incluant tous les frais de barème.
+ * Arrondi à la centaine près.
+ */
+export function computeDisplayedPrice(p: {
+  price: number;
+  tauxSansRisque?: number | null;
+  volatilite?: number | null;
+  fraisMutation?: number | null;
+  tauxActuariel?: number | null;
+  fraisGestion?: number | null;
+  fraisAcquisition?: number | null;
+}): number {
+  try {
+    const S0 = Number(p.price);
+    const k = S0;
+    const t = 7; // Durée max
+    const x = 35; // Âge standard
+    const freq = 12; // Mensuel
+    const r = p.tauxSansRisque ?? 0.02;
+    const sigma = p.volatilite ?? 0.06;
+    const fm = p.fraisMutation ?? 0.20; // Inclus
+    const it = p.tauxActuariel ?? 0.035;
+    const fg = p.fraisGestion ?? 0.05;
+    const fa = p.fraisAcquisition ?? 0.03;
+
+    const primeParEcheance = calculerPrimeParcelle(S0, k, t, r, sigma, fm, x, it, fg, fa, freq, true);
+    const nombreEcheancesTotal = t * freq;
+    return Math.round((primeParEcheance * nombreEcheancesTotal) / 100) * 100;
+  } catch (err) {
+    console.error("Erreur computeDisplayedPrice:", err);
+    return Math.round(Number(p.price) / 100) * 100;
+  }
 }
 
 // ============================================================

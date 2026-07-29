@@ -7,6 +7,7 @@ import Link from "next/link";
 
 import { Reveal } from "@/components/shared/reveal";
 import { fmtFCFA, PARCELLES } from "@/lib/parcelles";
+import { computeDisplayedPrice } from "@/lib/simulation/simulation";
 
 const DEFAULT_HERO_IMAGES = [
   "/images/hero/hero4.jpg",
@@ -108,10 +109,23 @@ function FeaturedCard({ p, i }: { p: any; i: number }) {
 export function FeaturedParcelles({ parcelles = [] }: { parcelles?: any[] }) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Use BDD available parcelles (capped at 10) or fallback to available static ones
   const itemsToDisplay = parcelles.length > 0
     ? parcelles
-    : PARCELLES.filter((p) => p.statut === "disponible").slice(0, 10);
+    : PARCELLES.filter((p) => p.statut === "disponible")
+        .slice(0, 10)
+        .map((p) => ({
+          ...p,
+          rawPrice: p.price,
+          price: computeDisplayedPrice({
+            price: p.price,
+            tauxSansRisque: p.tauxSansRisque,
+            volatilite: p.volatilite,
+            fraisMutation: p.fraisMutation,
+            tauxActuariel: p.tauxActuariel,
+            fraisGestion: p.fraisGestion,
+            fraisAcquisition: p.fraisAcquisition,
+          }),
+        }));
 
   const scroll = (direction: "left" | "right") => {
     if (scrollRef.current) {

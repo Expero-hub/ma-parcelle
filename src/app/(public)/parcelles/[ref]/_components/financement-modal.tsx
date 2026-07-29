@@ -22,6 +22,7 @@ export function FinancementModal({ parcelle }: FinancementModalProps) {
   const [frequency, setFrequency] = useState<FrequencePaiement | "">("");
   const [age, setAge] = useState<number | "">(35);
   const [priseEnChargeFraisMutation, setPriseEnChargeFraisMutation] = useState<boolean>(false);
+  const [garantieDeces, setGarantieDeces] = useState<boolean>(false);
   const [simulationResult, setSimulationResult] = useState<SimulationResult | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -53,6 +54,7 @@ export function FinancementModal({ parcelle }: FinancementModalProps) {
     setFrequency("");
     setAge(35);
     setPriseEnChargeFraisMutation(false);
+    setGarantieDeces(false);
     setSimulationResult(null);
     setErrorMsg(null);
   };
@@ -73,11 +75,15 @@ export function FinancementModal({ parcelle }: FinancementModalProps) {
       setErrorMsg("L'âge combiné avec la durée dépasse la limite de la table de mortalité.");
       return;
     }
+    if (garantieDeces && Number(age) + duration > 70) {
+      setErrorMsg("Vous ne pouvez pas souscrire à une garantie de décès.");
+      return;
+    }
 
     try {
       const res = simulerPrimeParcelle({
         parcelle: {
-          valeurParcelle: parcelle.price,
+          valeurParcelle: parcelle.rawPrice ?? parcelle.price,
           tauxSansRisque: parcelle.tauxSansRisque ?? 0.02,
           volatilite: parcelle.volatilite ?? 0.06,
           fraisMutation: parcelle.fraisMutation ?? 0.20,
@@ -90,6 +96,7 @@ export function FinancementModal({ parcelle }: FinancementModalProps) {
           age: Number(age),
           frequencePaiement: Number(frequency) as FrequencePaiement,
           priseEnChargeFraisMutation,
+          garantieDeces,
         },
       });
 
@@ -151,26 +158,28 @@ export function FinancementModal({ parcelle }: FinancementModalProps) {
 
             {/* Form */}
             <form onSubmit={handleSimulate} className="space-y-5">
-              {/* Duration Input */}
+              {/* Duration Select */}
               <div>
                 <label className="block font-sans text-sm font-semibold text-text mb-1.5">
-                  Durée de la simulation (an) :
+                  Durée de la simulation :
                 </label>
-                <input
-                  type="number"
-                  min={minDur}
-                  max={maxDur}
+                <select
                   value={duration}
                   onChange={(e) => {
                     const val = Number(e.target.value);
                     setDuration(val);
                   }}
-                  className="w-full rounded-lg border border-border bg-surface-2 px-3.5 py-2.5 font-sans text-base text-text focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full rounded-lg border border-border bg-surface-2 px-3.5 py-2.5 font-sans text-base text-text focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
                   required
-                />
-                <p className="mt-1.5 font-sans text-xs text-text-2 font-medium">
-                  * La durée est comprise entre {minDur} et {maxDur} ans
-                </p>
+                >
+                  <option value={1}>1 an</option>
+                  <option value={2}>2 ans</option>
+                  <option value={3}>3 ans</option>
+                  <option value={4}>4 ans</option>
+                  <option value={5}>5 ans</option>
+                  <option value={6}>6 ans</option>
+                  <option value={7}>7 ans</option>
+                </select>
               </div>
 
               {/* Age Input */}
@@ -194,20 +203,38 @@ export function FinancementModal({ parcelle }: FinancementModalProps) {
               </div>
 
               {/* Mutation Fees Toggle */}
-              <div className="flex items-center gap-2.5 py-1">
-                <input
-                  type="checkbox"
-                  id="priseEnChargeFraisMutation"
-                  checked={priseEnChargeFraisMutation}
-                  onChange={(e) => setPriseEnChargeFraisMutation(e.target.checked)}
-                  className="h-4.5 w-4.5 accent-primary rounded cursor-pointer"
-                />
-                <label
-                  htmlFor="priseEnChargeFraisMutation"
-                  className="font-sans text-sm font-semibold text-text cursor-pointer select-none"
-                >
-                  Pris en charge des frais de mutation et TF
-                </label>
+              <div className="flex flex-col gap-2 py-1">
+                <div className="flex items-center gap-2.5">
+                  <input
+                    type="checkbox"
+                    id="priseEnChargeFraisMutation"
+                    checked={priseEnChargeFraisMutation}
+                    onChange={(e) => setPriseEnChargeFraisMutation(e.target.checked)}
+                    className="h-4.5 w-4.5 accent-primary rounded cursor-pointer"
+                  />
+                  <label
+                    htmlFor="priseEnChargeFraisMutation"
+                    className="font-sans text-sm font-semibold text-text cursor-pointer select-none"
+                  >
+                    Pris en charge des frais de mutation et TF
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-2.5 mt-1">
+                  <input
+                    type="checkbox"
+                    id="garantieDeces"
+                    checked={garantieDeces}
+                    onChange={(e) => setGarantieDeces(e.target.checked)}
+                    className="h-4.5 w-4.5 accent-primary rounded cursor-pointer"
+                  />
+                  <label
+                    htmlFor="garantieDeces"
+                    className="font-sans text-sm font-semibold text-text cursor-pointer select-none"
+                  >
+                    Garantie en cas de décès
+                  </label>
+                </div>
               </div>
 
               {/* Frequency Select */}

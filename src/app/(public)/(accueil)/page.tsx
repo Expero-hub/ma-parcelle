@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { computeDisplayedPrice } from "@/lib/simulation/simulation";
 import { SiteFooter } from "@/components/shared/site-footer";
 import { Hero } from "./_components/hero";
 import { KeyStats } from "./_components/key-stats";
@@ -30,23 +31,37 @@ export default async function Home() {
       }),
     ]);
 
-    latestParcelles = dbParcelles.map((p) => ({
-      id: p.id,
-      reference: p.reference,
-      status: p.status,
-      area: Number(p.area),
-      price: Number(p.price),
-      zone: p.zone
-        ? {
-            district: p.zone.district,
-            commune: p.zone.commune,
-            department: p.zone.department,
-          }
-        : null,
-      images: p.images.map((img) => ({
-        path: img.path,
-      })),
-    }));
+    latestParcelles = dbParcelles.map((p) => {
+      const rawPrice = Number(p.price);
+      const displayedPrice = computeDisplayedPrice({
+        price: rawPrice,
+        tauxSansRisque: p.tauxSansRisque !== null ? Number(p.tauxSansRisque) : null,
+        volatilite: p.volatilite !== null ? Number(p.volatilite) : null,
+        fraisMutation: p.fraisMutation !== null ? Number(p.fraisMutation) : null,
+        tauxActuariel: p.tauxActuariel !== null ? Number(p.tauxActuariel) : null,
+        fraisGestion: p.fraisGestion !== null ? Number(p.fraisGestion) : null,
+        fraisAcquisition: p.fraisAcquisition !== null ? Number(p.fraisAcquisition) : null,
+      });
+
+      return {
+        id: p.id,
+        reference: p.reference,
+        status: p.status,
+        area: Number(p.area),
+        price: displayedPrice,
+        rawPrice: rawPrice,
+        zone: p.zone
+          ? {
+              district: p.zone.district,
+              commune: p.zone.commune,
+              department: p.zone.department,
+            }
+          : null,
+        images: p.images.map((img) => ({
+          path: img.path,
+        })),
+      };
+    });
 
     const zoneSet = new Set<string>();
     dbZones.forEach((z) => {

@@ -21,6 +21,7 @@ export default async function BaremesPage() {
     { name: "Taux actuariel (Taux technique)", value: formatPercent(bareme?.tauxActuariel) },
     { name: "Frais de gestion", value: formatPercent(bareme?.fraisGestion) },
     { name: "Frais d'acquisition", value: formatPercent(bareme?.fraisAcquisition) },
+    { name: "Garantie en cas de décès (Âge max)", value: "70 ans" },
   ];
 
   return (

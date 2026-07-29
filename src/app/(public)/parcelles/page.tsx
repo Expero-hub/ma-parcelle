@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
 import { PARCELLES, type Parcelle, type Statut } from "@/lib/parcelles";
 import { ParcellesView } from "./_components/parcelles-view";
+import { computeDisplayedPrice } from "@/lib/simulation/simulation";
 
 export const metadata: Metadata = {
   title: "Parcelles · Ma Parcelle",
@@ -48,12 +49,24 @@ export default async function ParcellesPage() {
         const lat = p.zone?.latitude ? Number(p.zone.latitude) : 6.45;
         const lng = p.zone?.longitude ? Number(p.zone.longitude) : 2.35;
 
+        const rawPrice = Number(p.price);
+        const displayedPrice = computeDisplayedPrice({
+          price: rawPrice,
+          tauxSansRisque: p.tauxSansRisque !== null ? Number(p.tauxSansRisque) : null,
+          volatilite: p.volatilite !== null ? Number(p.volatilite) : null,
+          fraisMutation: p.fraisMutation !== null ? Number(p.fraisMutation) : null,
+          tauxActuariel: p.tauxActuariel !== null ? Number(p.tauxActuariel) : null,
+          fraisGestion: p.fraisGestion !== null ? Number(p.fraisGestion) : null,
+          fraisAcquisition: p.fraisAcquisition !== null ? Number(p.fraisAcquisition) : null,
+        });
+
         return {
           ref: p.reference,
           ville: p.zone?.commune || p.zone?.department || "Bénin",
           quartier: p.zone?.district || p.zone?.fullAddress || "Autre quartier",
           surf: Number(p.area),
-          price: Number(p.price),
+          price: displayedPrice,
+          rawPrice: rawPrice,
           statut,
           verifie: p.titleVerified ?? true,
           paiement: "Échelonné",
@@ -73,7 +86,19 @@ export default async function ParcellesPage() {
 
   // Fallback if no database parcelles found
   if (parcellesList.length === 0) {
-    parcellesList = PARCELLES;
+    parcellesList = PARCELLES.map((p) => ({
+      ...p,
+      rawPrice: p.price,
+      price: computeDisplayedPrice({
+        price: p.price,
+        tauxSansRisque: p.tauxSansRisque,
+        volatilite: p.volatilite,
+        fraisMutation: p.fraisMutation,
+        tauxActuariel: p.tauxActuariel,
+        fraisGestion: p.fraisGestion,
+        fraisAcquisition: p.fraisAcquisition,
+      }),
+    }));
   }
   if (zoneNames.length === 0) {
     zoneNames = Array.from(new Set(parcellesList.map((p) => p.ville)));

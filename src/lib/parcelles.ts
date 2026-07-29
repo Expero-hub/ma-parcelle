@@ -13,6 +13,7 @@ export interface Parcelle {
   quartier: string;
   surf: number;
   price: number;
+  rawPrice?: number;
   statut: Statut;
   verifie: boolean;
   paiement: "Échelonné" | "Comptant" | "—";
