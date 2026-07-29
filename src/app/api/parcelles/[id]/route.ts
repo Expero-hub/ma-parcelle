@@ -21,6 +21,12 @@ const updateParcelleSchema = z.object({
   geom: z.any().optional(),
   images: z.array(z.string()).optional(),
   status: z.enum(["AVAILABLE", "RESERVED", "SOLD"]).optional(),
+  tauxSansRisque: z.number().nonnegative().optional().nullable(),
+  volatilite: z.number().nonnegative().optional().nullable(),
+  fraisMutation: z.number().nonnegative().optional().nullable(),
+  tauxActuariel: z.number().nonnegative().optional().nullable(),
+  fraisGestion: z.number().nonnegative().optional().nullable(),
+  fraisAcquisition: z.number().nonnegative().optional().nullable(),
 });
 
 export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }) {
@@ -147,6 +153,12 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
       maxDuration: parcelle.maxDuration ?? 5,
       description: parcelle.description ?? "",
       geom: parcelle.geom,
+      tauxSansRisque: parcelle.tauxSansRisque ? Number(parcelle.tauxSansRisque) : null,
+      volatilite: parcelle.volatilite ? Number(parcelle.volatilite) : null,
+      fraisMutation: parcelle.fraisMutation ? Number(parcelle.fraisMutation) : null,
+      tauxActuariel: parcelle.tauxActuariel ? Number(parcelle.tauxActuariel) : null,
+      fraisGestion: parcelle.fraisGestion ? Number(parcelle.fraisGestion) : null,
+      fraisAcquisition: parcelle.fraisAcquisition ? Number(parcelle.fraisAcquisition) : null,
       block: parcelle.block ?? "",
       lot: parcelle.lot ?? "",
       zone: {
@@ -213,6 +225,29 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       throw new ApiError(403, "OUT_OF_SCOPE", "Le point de vente sélectionné est hors de votre périmètre.");
     }
 
+    // Resolve bareme parameters if not customized (or if "PAR DEFAUT")
+    let tauxSansRisque = body.tauxSansRisque;
+    let volatilite = body.volatilite;
+    let fraisMutation = body.fraisMutation;
+    let tauxActuariel = body.tauxActuariel;
+    let fraisGestion = body.fraisGestion;
+    let fraisAcquisition = body.fraisAcquisition;
+
+    if (tauxSansRisque === null) {
+      const activeBareme = await prisma.baremeTechniqueDefaut.findFirst({
+        where: { isActive: true },
+        orderBy: { effectiveFrom: "desc" },
+      });
+      if (activeBareme) {
+        tauxSansRisque = Number(activeBareme.tauxSansRisque);
+        volatilite = Number(activeBareme.volatilite);
+        fraisMutation = Number(activeBareme.fraisMutation);
+        tauxActuariel = Number(activeBareme.tauxActuariel);
+        fraisGestion = Number(activeBareme.fraisGestion);
+        fraisAcquisition = Number(activeBareme.fraisAcquisition);
+      }
+    }
+
     const updated = await prisma.$transaction(async (tx) => {
       const p = await tx.parcelle.update({
         where: { id },
@@ -227,6 +262,12 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
           description: body.description,
           geom: body.geom,
           status: body.status,
+          ...(tauxSansRisque !== undefined && { tauxSansRisque }),
+          ...(volatilite !== undefined && { volatilite }),
+          ...(fraisMutation !== undefined && { fraisMutation }),
+          ...(tauxActuariel !== undefined && { tauxActuariel }),
+          ...(fraisGestion !== undefined && { fraisGestion }),
+          ...(fraisAcquisition !== undefined && { fraisAcquisition }),
         },
       });
 

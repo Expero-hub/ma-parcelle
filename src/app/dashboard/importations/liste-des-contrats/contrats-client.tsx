@@ -41,6 +41,13 @@ type AgencyOption = {
   name: string;
 };
 
+const STATUS_STYLES: Record<string, { bgClass: string; textClass: string }> = {
+  "EN COURS": { bgClass: "bg-emerald-500/15", textClass: "text-emerald-600 dark:text-emerald-400" },
+  "BROUILLON": { bgClass: "bg-amber-500/15", textClass: "text-amber-600 dark:text-amber-400" },
+  "TERMINE": { bgClass: "bg-blue-500/15", textClass: "text-blue-600 dark:text-blue-400" },
+  "ANNULE": { bgClass: "bg-red-500/15", textClass: "text-red-600 dark:text-red-400" },
+};
+
 export function ContratsClient({
   initialContracts,
   agencies,
@@ -91,6 +98,32 @@ export function ContratsClient({
       }
     } catch (err) {
       console.error("Erreur de mise à jour du statut :", err);
+    }
+  };
+
+  const handleCancelContract = async (id: string) => {
+    try {
+      const res = await fetch(`/api/contracts/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "CANCELLED" }),
+      });
+      if (res.ok) {
+        setContracts((prev) =>
+          prev.map((c) =>
+            c.id === id
+              ? {
+                  ...c,
+                  isActive: false,
+                  status: "ANNULE",
+                }
+              : c
+          )
+        );
+        router.refresh();
+      }
+    } catch (err) {
+      console.error("Erreur d'annulation du contrat :", err);
     }
   };
 
@@ -245,9 +278,17 @@ export function ContratsClient({
                     {c.agencyName}
                   </td>
                   <td className="px-5 py-4">
-                    <span className="inline-flex rounded-md bg-emerald-500/15 px-2.5 py-1 text-xs font-bold text-emerald-500 uppercase tracking-wider">
-                      {c.status}
-                    </span>
+                    {(() => {
+                      const style = STATUS_STYLES[c.status] || {
+                        bgClass: "bg-neutral-500/15",
+                        textClass: "text-neutral-500",
+                      };
+                      return (
+                        <span className={`inline-flex rounded-md px-2.5 py-1 text-xs font-bold uppercase tracking-wider ${style.bgClass} ${style.textClass}`}>
+                          {c.status}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="px-5 py-4">
                     <button
@@ -279,18 +320,19 @@ export function ContratsClient({
                       <DropdownMenuContent align="end" className="w-36 bg-surface border border-border rounded-xl shadow-lg p-1">
                         <DropdownMenuItem
                           onClick={() => setEditingContract(c)}
-                          className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-text hover:bg-surface-2 rounded-lg cursor-pointer transition-colors"
+                          disabled={c.status !== "EN COURS"}
+                          className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-text hover:bg-surface-2 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg cursor-pointer transition-colors"
                         >
                           <Edit3 className="size-3.5 text-primary" />
                           Modifier
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => handleToggleActive(c.id, false)}
-                          disabled={c.isActive}
+                          onClick={() => handleCancelContract(c.id)}
+                          disabled={c.status === "ANNULE"}
                           className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-red-500 hover:bg-red-50 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg cursor-pointer transition-colors"
                         >
                           <ShieldAlert className="size-3.5" />
-                          Désactiver
+                          Annuler
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

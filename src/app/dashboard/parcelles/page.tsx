@@ -48,12 +48,17 @@ export default async function ParcellesPage() {
         },
         contracts: {
           where: { deletedAt: null, status: { not: "CANCELLED" } },
+          orderBy: { createdAt: "desc" },
           select: {
             id: true,
             totalAmount: true,
             installments: {
+              where: { deletedAt: null },
               select: {
-                payments: { select: { amount: true } },
+                payments: {
+                  where: { deletedAt: null },
+                  select: { amount: true },
+                },
               },
             },
           },

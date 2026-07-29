@@ -27,6 +27,12 @@ export interface Parcelle {
   minDuration?: number;
   maxDuration?: number;
   images?: string[];
+  tauxSansRisque?: number | null;
+  volatilite?: number | null;
+  fraisMutation?: number | null;
+  tauxActuariel?: number | null;
+  fraisGestion?: number | null;
+  fraisAcquisition?: number | null;
 }
 
 export interface StatutMeta {

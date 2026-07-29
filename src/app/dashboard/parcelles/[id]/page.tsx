@@ -56,7 +56,12 @@ export default async function ParcelleDetailPage({ params }: PageProps) {
                 },
               },
               installments: {
-                include: { payments: true },
+                where: { deletedAt: null },
+                include: {
+                  payments: {
+                    where: { deletedAt: null }
+                  }
+                },
                 orderBy: { startDate: "asc" },
               },
             },

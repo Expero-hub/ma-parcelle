@@ -16,7 +16,7 @@ export default async function EditParcellePage({ params }: PageProps) {
   const user = (await getCurrentUser())! as ScopedUser;
   const scopedPosIds = await getScopedPointOfSaleIds(user);
 
-  const [parcelle, pointsOfSale, zones] = await Promise.all([
+  const [parcelle, pointsOfSale, zones, defaultBareme] = await Promise.all([
     prisma.parcelle.findFirst({
       where: { id, deletedAt: null },
       include: { images: { orderBy: { order: "asc" } } },
@@ -33,6 +33,10 @@ export default async function EditParcellePage({ params }: PageProps) {
       where: { active: true, deletedAt: null },
       select: { id: true, code: true, commune: true, department: true },
       orderBy: { code: "asc" },
+    }),
+    prisma.baremeTechniqueDefaut.findFirst({
+      where: { isActive: true },
+      orderBy: { effectiveFrom: "desc" },
     }),
   ]);
 
@@ -59,6 +63,12 @@ export default async function EditParcellePage({ params }: PageProps) {
       id: img.id,
       path: img.path,
     })),
+    tauxSansRisque: parcelle.tauxSansRisque ? Number(parcelle.tauxSansRisque) : null,
+    volatilite: parcelle.volatilite ? Number(parcelle.volatilite) : null,
+    fraisMutation: parcelle.fraisMutation ? Number(parcelle.fraisMutation) : null,
+    tauxActuariel: parcelle.tauxActuariel ? Number(parcelle.tauxActuariel) : null,
+    fraisGestion: parcelle.fraisGestion ? Number(parcelle.fraisGestion) : null,
+    fraisAcquisition: parcelle.fraisAcquisition ? Number(parcelle.fraisAcquisition) : null,
   };
 
   const formattedZones = zones.map((z) => ({
@@ -67,6 +77,22 @@ export default async function EditParcellePage({ params }: PageProps) {
     commune: z.commune ?? "",
     department: z.department ?? "",
   }));
+
+  const formattedBareme = defaultBareme ? {
+    tauxSansRisque: Number(defaultBareme.tauxSansRisque),
+    volatilite: Number(defaultBareme.volatilite),
+    fraisMutation: Number(defaultBareme.fraisMutation),
+    tauxActuariel: Number(defaultBareme.tauxActuariel),
+    fraisGestion: Number(defaultBareme.fraisGestion),
+    fraisAcquisition: Number(defaultBareme.fraisAcquisition),
+  } : {
+    tauxSansRisque: 0.02,
+    volatilite: 0.06,
+    fraisMutation: 0.20,
+    tauxActuariel: 0.035,
+    fraisGestion: 0.05,
+    fraisAcquisition: 0.03,
+  };
 
   return (
     <div className="mx-auto max-w-4xl p-6 md:p-8">
@@ -80,6 +106,7 @@ export default async function EditParcellePage({ params }: PageProps) {
         pointsOfSale={pointsOfSale}
         zones={formattedZones}
         initialData={formattedParcelle}
+        defaultBareme={formattedBareme}
       />
     </div>
   );

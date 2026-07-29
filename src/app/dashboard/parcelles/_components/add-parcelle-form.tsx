@@ -43,6 +43,12 @@ const parcelleSchema = z.object({
       })
     )
     .min(3, "Définissez au moins 3 points pour le polygone."),
+  tauxSansRisque: z.coerce.number().nonnegative().optional().nullable(),
+  volatilite: z.coerce.number().nonnegative().optional().nullable(),
+  fraisMutation: z.coerce.number().nonnegative().optional().nullable(),
+  tauxActuariel: z.coerce.number().nonnegative().optional().nullable(),
+  fraisGestion: z.coerce.number().nonnegative().optional().nullable(),
+  fraisAcquisition: z.coerce.number().nonnegative().optional().nullable(),
 });
 
 type FormValues = z.infer<typeof parcelleSchema>;
@@ -63,20 +69,48 @@ type InitialData = {
   geom: { coordinates: [number, number][][] } | any;
   images: { id: string; path: string }[];
   status?: string;
+  tauxSansRisque?: number | null;
+  volatilite?: number | null;
+  fraisMutation?: number | null;
+  tauxActuariel?: number | null;
+  fraisGestion?: number | null;
+  fraisAcquisition?: number | null;
 };
 
 export function AddParcelleForm({
   pointsOfSale,
   zones,
   initialData,
+  defaultBareme,
 }: {
   pointsOfSale: Option[];
   zones: ZoneOption[];
   initialData?: InitialData;
+  defaultBareme: {
+    tauxSansRisque: number;
+    volatilite: number;
+    fraisMutation: number;
+    tauxActuariel: number;
+    fraisGestion: number;
+    fraisAcquisition: number;
+  };
 }) {
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+
+  // Parameter override mode state
+  const isInitiallyCustom = initialData
+    ? (initialData.tauxSansRisque !== null &&
+       (Number(initialData.tauxSansRisque) !== defaultBareme.tauxSansRisque ||
+        Number(initialData.volatilite) !== defaultBareme.volatilite ||
+        Number(initialData.fraisMutation) !== defaultBareme.fraisMutation ||
+        Number(initialData.tauxActuariel) !== defaultBareme.tauxActuariel ||
+        Number(initialData.fraisGestion) !== defaultBareme.fraisGestion ||
+        Number(initialData.fraisAcquisition) !== defaultBareme.fraisAcquisition))
+    : false;
+
+  const [paramMode, setParamMode] = useState<"DEFAULT" | "CUSTOM">(isInitiallyCustom ? "CUSTOM" : "DEFAULT");
 
   // Images state (holds URLs of uploaded images)
   const [images, setImages] = useState<string[]>(
@@ -125,6 +159,24 @@ export function AddParcelleForm({
       zoneId: initialData?.zoneId ?? "",
       description: initialData?.description ?? "",
       points: initialPoints,
+      tauxSansRisque: initialData?.tauxSansRisque !== undefined && initialData?.tauxSansRisque !== null
+        ? Number(initialData.tauxSansRisque) * 100
+        : defaultBareme.tauxSansRisque * 100,
+      volatilite: initialData?.volatilite !== undefined && initialData?.volatilite !== null
+        ? Number(initialData.volatilite) * 100
+        : defaultBareme.volatilite * 100,
+      fraisMutation: initialData?.fraisMutation !== undefined && initialData?.fraisMutation !== null
+        ? Number(initialData.fraisMutation) * 100
+        : defaultBareme.fraisMutation * 100,
+      tauxActuariel: initialData?.tauxActuariel !== undefined && initialData?.tauxActuariel !== null
+        ? Number(initialData.tauxActuariel) * 100
+        : defaultBareme.tauxActuariel * 100,
+      fraisGestion: initialData?.fraisGestion !== undefined && initialData?.fraisGestion !== null
+        ? Number(initialData.fraisGestion) * 100
+        : defaultBareme.fraisGestion * 100,
+      fraisAcquisition: initialData?.fraisAcquisition !== undefined && initialData?.fraisAcquisition !== null
+        ? Number(initialData.fraisAcquisition) * 100
+        : defaultBareme.fraisAcquisition * 100,
     },
   });
 
@@ -181,7 +233,7 @@ export function AddParcelleForm({
     setFormError(null);
 
     // Build GeoJSON Polygon geometry.
-    // Standard Polygon coordinates has first and last point identical: [[[lng, lat], ..., [firstLng, firstLat]]]
+    // Standard Polygon coordinates has first and last point identical: [[[lng, lat], ...], [firstLng, firstLat]]]
     const coords = values.points.map((pt) => [pt.lng, pt.lat]);
     coords.push([values.points[0].lng, values.points[0].lat]); // Close polygon
     const geom = {
@@ -201,6 +253,12 @@ export function AddParcelleForm({
       geom,
       images,
       ...(initialData ? { status: initialData.status } : {}),
+      tauxSansRisque: paramMode === "DEFAULT" ? null : (values.tauxSansRisque !== null && values.tauxSansRisque !== undefined ? Number(values.tauxSansRisque) / 100 : null),
+      volatilite: paramMode === "DEFAULT" ? null : (values.volatilite !== null && values.volatilite !== undefined ? Number(values.volatilite) / 100 : null),
+      fraisMutation: paramMode === "DEFAULT" ? null : (values.fraisMutation !== null && values.fraisMutation !== undefined ? Number(values.fraisMutation) / 100 : null),
+      tauxActuariel: paramMode === "DEFAULT" ? null : (values.tauxActuariel !== null && values.tauxActuariel !== undefined ? Number(values.tauxActuariel) / 100 : null),
+      fraisGestion: paramMode === "DEFAULT" ? null : (values.fraisGestion !== null && values.fraisGestion !== undefined ? Number(values.fraisGestion) / 100 : null),
+      fraisAcquisition: paramMode === "DEFAULT" ? null : (values.fraisAcquisition !== null && values.fraisAcquisition !== undefined ? Number(values.fraisAcquisition) / 100 : null),
     };
 
     try {
@@ -421,6 +479,139 @@ export function AddParcelleForm({
           </label>
           <Textarea id="description" placeholder="Description de la parcelle..." rows={3} {...register("description")} />
         </div>
+      </div>
+
+      {/* PARAMETRES TECHNIQUES DE SIMULATION */}
+      <div className="rounded-2xl border border-border bg-surface p-6 shadow-[var(--shadow)]">
+        <h2 className="mb-2 text-base font-semibold text-text">Barème technique de simulation</h2>
+        <p className="text-xs text-text-2 mb-4">
+          Sélectionnez si cette parcelle utilise les paramètres de barème globaux par défaut ou des paramètres de simulation sur-mesure.
+        </p>
+
+        {/* Selector Mode */}
+        <div className="flex gap-4 mb-6">
+          <label className="flex items-center gap-2 cursor-pointer font-sans text-sm font-medium text-text">
+            <input
+              type="radio"
+              name="paramMode"
+              value="DEFAULT"
+              checked={paramMode === "DEFAULT"}
+              onChange={() => setParamMode("DEFAULT")}
+              className="accent-primary"
+            />
+            <span>PAR DÉFAUT</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer font-sans text-sm font-medium text-text">
+            <input
+              type="radio"
+              name="paramMode"
+              value="CUSTOM"
+              checked={paramMode === "CUSTOM"}
+              onChange={() => setParamMode("CUSTOM")}
+              className="accent-primary"
+            />
+            <span>PERSONNALISER</span>
+          </label>
+        </div>
+
+        {/* Read-only defaults display when DEFAULT is selected */}
+        {paramMode === "DEFAULT" ? (
+          <div className="grid gap-4 grid-cols-2 md:grid-cols-3 bg-surface-2/30 rounded-xl p-4 border border-border/60">
+            <div>
+              <span className="block text-xs font-semibold text-text-2 uppercase mb-1">Taux sans risque</span>
+              <span className="text-sm font-bold text-text">{(defaultBareme.tauxSansRisque * 100).toFixed(2)} %</span>
+            </div>
+            <div>
+              <span className="block text-xs font-semibold text-text-2 uppercase mb-1">Volatilité</span>
+              <span className="text-sm font-bold text-text">{(defaultBareme.volatilite * 100).toFixed(2)} %</span>
+            </div>
+            <div>
+              <span className="block text-xs font-semibold text-text-2 uppercase mb-1">Frais de mutation</span>
+              <span className="text-sm font-bold text-text">{(defaultBareme.fraisMutation * 100).toFixed(2)} %</span>
+            </div>
+            <div>
+              <span className="block text-xs font-semibold text-text-2 uppercase mb-1">Taux actuariel (Taux technique)</span>
+              <span className="text-sm font-bold text-text">{(defaultBareme.tauxActuariel * 100).toFixed(2)} %</span>
+            </div>
+            <div>
+              <span className="block text-xs font-semibold text-text-2 uppercase mb-1">Frais de gestion</span>
+              <span className="text-sm font-bold text-text">{(defaultBareme.fraisGestion * 100).toFixed(2)} %</span>
+            </div>
+            <div>
+              <span className="block text-xs font-semibold text-text-2 uppercase mb-1">Frais d'acquisition</span>
+              <span className="text-sm font-bold text-text">{(defaultBareme.fraisAcquisition * 100).toFixed(2)} %</span>
+            </div>
+          </div>
+        ) : (
+          /* Editable fields when CUSTOM is selected */
+          <div className="grid gap-6 md:grid-cols-3">
+            <div>
+              <label className={labelCls}>Taux sans risque (%)</label>
+              <Input
+                type="number"
+                step="any"
+                placeholder="Ex: 2.0"
+                {...register("tauxSansRisque")}
+              />
+              {errors.tauxSansRisque && <p className={errCls}>{errors.tauxSansRisque.message}</p>}
+            </div>
+
+            <div>
+              <label className={labelCls}>Volatilité (%)</label>
+              <Input
+                type="number"
+                step="any"
+                placeholder="Ex: 6.0"
+                {...register("volatilite")}
+              />
+              {errors.volatilite && <p className={errCls}>{errors.volatilite.message}</p>}
+            </div>
+
+            <div>
+              <label className={labelCls}>Frais de mutation (%)</label>
+              <Input
+                type="number"
+                step="any"
+                placeholder="Ex: 20.0"
+                {...register("fraisMutation")}
+              />
+              {errors.fraisMutation && <p className={errCls}>{errors.fraisMutation.message}</p>}
+            </div>
+
+            <div>
+              <label className={labelCls}>Taux actuariel (%)</label>
+              <Input
+                type="number"
+                step="any"
+                placeholder="Ex: 3.5"
+                {...register("tauxActuariel")}
+              />
+              {errors.tauxActuariel && <p className={errCls}>{errors.tauxActuariel.message}</p>}
+            </div>
+
+            <div>
+              <label className={labelCls}>Frais de gestion (%)</label>
+              <Input
+                type="number"
+                step="any"
+                placeholder="Ex: 5.0"
+                {...register("fraisGestion")}
+              />
+              {errors.fraisGestion && <p className={errCls}>{errors.fraisGestion.message}</p>}
+            </div>
+
+            <div>
+              <label className={labelCls}>Frais d'acquisition (%)</label>
+              <Input
+                type="number"
+                step="any"
+                placeholder="Ex: 3.0"
+                {...register("fraisAcquisition")}
+              />
+              {errors.fraisAcquisition && <p className={errCls}>{errors.fraisAcquisition.message}</p>}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* DELIMITATION GEOGRAPHIQUE */}

@@ -17,6 +17,7 @@ const updateContractSchema = z.object({
   endDate: z.string().optional(),
   agencyId: z.string().optional(),
   isActive: z.boolean().optional(),
+  status: z.enum(["DRAFT", "ACTIVE", "COMPLETED", "CANCELLED"]).optional(),
 });
 
 export const PATCH = route(async (req: NextRequest) => {
@@ -62,6 +63,18 @@ export const PATCH = route(async (req: NextRequest) => {
   if (body.isActive !== undefined) {
     data.isValidated = body.isActive;
     data.status = body.isActive ? "ACTIVE" : "DRAFT";
+  }
+  if (body.status !== undefined) {
+    data.status = body.status;
+    if (body.status === "CANCELLED") {
+      data.isValidated = false;
+      if (existing.parcelleId) {
+        await prisma.parcelle.update({
+          where: { id: existing.parcelleId },
+          data: { status: "AVAILABLE" },
+        });
+      }
+    }
   }
 
   const updated = await prisma.contract.update({

@@ -21,6 +21,12 @@ const createParcelleSchema = z.object({
   description: z.string().optional(),
   geom: z.any().optional(), // GeoJSON polygon or list of coordinates
   images: z.array(z.string()).optional().default([]),
+  tauxSansRisque: z.number().nonnegative().optional().nullable(),
+  volatilite: z.number().nonnegative().optional().nullable(),
+  fraisMutation: z.number().nonnegative().optional().nullable(),
+  tauxActuariel: z.number().nonnegative().optional().nullable(),
+  fraisGestion: z.number().nonnegative().optional().nullable(),
+  fraisAcquisition: z.number().nonnegative().optional().nullable(),
 });
 
 export async function GET(req: NextRequest) {
@@ -100,12 +106,17 @@ export async function GET(req: NextRequest) {
           },
           contracts: {
             where: { deletedAt: null, status: { not: "CANCELLED" } },
+            orderBy: { createdAt: "desc" },
             select: {
               id: true,
               totalAmount: true,
               installments: {
+                where: { deletedAt: null },
                 select: {
-                  payments: { select: { amount: true } },
+                  payments: {
+                    where: { deletedAt: null },
+                    select: { amount: true },
+                  },
                 },
               },
             },
@@ -186,6 +197,38 @@ export async function POST(req: Request) {
       throw new ApiError(400, "DUPLICATE_REFERENCE", "Cette référence de parcelle existe déjà.");
     }
 
+    // Resolve bareme parameters if not customized (or if "PAR DEFAUT")
+    let tauxSansRisque = body.tauxSansRisque;
+    let volatilite = body.volatilite;
+    let fraisMutation = body.fraisMutation;
+    let tauxActuariel = body.tauxActuariel;
+    let fraisGestion = body.fraisGestion;
+    let fraisAcquisition = body.fraisAcquisition;
+
+    const isCustom = tauxSansRisque !== undefined && tauxSansRisque !== null;
+
+    if (!isCustom) {
+      const activeBareme = await prisma.baremeTechniqueDefaut.findFirst({
+        where: { isActive: true },
+        orderBy: { effectiveFrom: "desc" },
+      });
+      if (activeBareme) {
+        tauxSansRisque = Number(activeBareme.tauxSansRisque);
+        volatilite = Number(activeBareme.volatilite);
+        fraisMutation = Number(activeBareme.fraisMutation);
+        tauxActuariel = Number(activeBareme.tauxActuariel);
+        fraisGestion = Number(activeBareme.fraisGestion);
+        fraisAcquisition = Number(activeBareme.fraisAcquisition);
+      } else {
+        tauxSansRisque = 0.02;
+        volatilite = 0.06;
+        fraisMutation = 0.20;
+        tauxActuariel = 0.035;
+        fraisGestion = 0.05;
+        fraisAcquisition = 0.03;
+      }
+    }
+
     // Create the parcel with images
     const created = await prisma.$transaction(async (tx) => {
       const p = await tx.parcelle.create({
@@ -200,6 +243,12 @@ export async function POST(req: Request) {
           description: body.description,
           geom: body.geom,
           createdById: user.id,
+          tauxSansRisque,
+          volatilite,
+          fraisMutation,
+          tauxActuariel,
+          fraisGestion,
+          fraisAcquisition,
         },
       });
 

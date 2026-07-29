@@ -227,14 +227,16 @@ export function ParcellesList({
 
           {/* COMBODOBX POINT OF SALE FILTER */}
           <Popover open={posOpen} onOpenChange={setPosOpen}>
-            <PopoverTrigger>
-              <button
-                type="button"
-                className="inline-flex h-10 items-center justify-between gap-2 rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm text-text hover:bg-surface-2/80 transition-colors"
-              >
-                <span>{selectedPos ? selectedPos.name : "Tous les points de vente"}</span>
-                <ChevronsUpDown className="h-4 w-4 shrink-0 text-text-2" />
-              </button>
+            <PopoverTrigger
+              render={
+                <button
+                  type="button"
+                  className="inline-flex h-10 items-center justify-between gap-2 rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm text-text hover:bg-surface-2/80 transition-colors"
+                />
+              }
+            >
+              <span>{selectedPos ? selectedPos.name : "Tous les points de vente"}</span>
+              <ChevronsUpDown className="h-4 w-4 shrink-0 text-text-2" />
             </PopoverTrigger>
             <PopoverContent align="start" className="w-(--anchor-width) min-w-64 p-0">
               <Command>
@@ -386,11 +388,14 @@ export function ParcellesList({
                   {/* Actions Dropdown */}
                   <DropdownMenu>
                     <DropdownMenuTrigger
-                      onClick={(e) => e.stopPropagation()}
+                      render={
+                        <button 
+                          onClick={(e) => e.stopPropagation()}
+                          className="rounded-lg p-1.5 text-text-2 hover:bg-surface-2"
+                        />
+                      }
                     >
-                      <button className="rounded-lg p-1.5 text-text-2 hover:bg-surface-2">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </button>
+                      <MoreHorizontal className="h-4 w-4" />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                       <DropdownMenuItem onClick={() => router.push(`/dashboard/parcelles/${r.id}`)}>
@@ -485,10 +490,12 @@ export function ParcellesList({
                   </td>
                   <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                     <DropdownMenu>
-                      <DropdownMenuTrigger>
-                        <button className="rounded-lg p-1.5 text-text-2 hover:bg-surface-2">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </button>
+                      <DropdownMenuTrigger
+                        render={
+                          <button className="rounded-lg p-1.5 text-text-2 hover:bg-surface-2" />
+                        }
+                      >
+                        <MoreHorizontal className="h-4 w-4" />
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => router.push(`/dashboard/parcelles/${r.id}`)}>

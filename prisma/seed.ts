@@ -382,12 +382,35 @@ async function seedTestClientUserAndContract(clientProfileId: string) {
   }
 }
 
+async function seedDefaultBareme() {
+  const existing = await prisma.baremeTechniqueDefaut.findFirst({
+    where: { isActive: true },
+  });
+
+  if (!existing) {
+    await prisma.baremeTechniqueDefaut.create({
+      data: {
+        label: "Défaut",
+        tauxSansRisque: 0.02,
+        volatilite: 0.06,
+        fraisMutation: 0.20,
+        tauxActuariel: 0.035,
+        fraisGestion: 0.05,
+        fraisAcquisition: 0.03,
+        isActive: true,
+      },
+    });
+    console.log("[seed] Barème technique par défaut créé.");
+  }
+}
+
 async function main() {
   const { admin, client } = await seedProfiles();
   const menuIds = await seedMenus();
   await grantAdminPermissions(admin.id, menuIds);
   await seedAdminUser(admin.id);
   await seedTestClientUserAndContract(client.id);
+  await seedDefaultBareme();
   console.log("[seed] Terminé.");
 }
 

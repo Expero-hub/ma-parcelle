@@ -9,7 +9,7 @@ export default async function AddParcellePage() {
   const user = (await getCurrentUser())! as ScopedUser;
   const scopedPosIds = await getScopedPointOfSaleIds(user);
 
-  const [pointsOfSale, zones] = await Promise.all([
+  const [pointsOfSale, zones, defaultBareme] = await Promise.all([
     prisma.pointOfSale.findMany({
       where: {
         active: true,
@@ -23,6 +23,10 @@ export default async function AddParcellePage() {
       select: { id: true, code: true, commune: true, department: true },
       orderBy: { code: "asc" },
     }),
+    prisma.baremeTechniqueDefaut.findFirst({
+      where: { isActive: true },
+      orderBy: { effectiveFrom: "desc" },
+    }),
   ]);
 
   const formattedZones = zones.map((z) => ({
@@ -32,6 +36,22 @@ export default async function AddParcellePage() {
     department: z.department ?? "",
   }));
 
+  const formattedBareme = defaultBareme ? {
+    tauxSansRisque: Number(defaultBareme.tauxSansRisque),
+    volatilite: Number(defaultBareme.volatilite),
+    fraisMutation: Number(defaultBareme.fraisMutation),
+    tauxActuariel: Number(defaultBareme.tauxActuariel),
+    fraisGestion: Number(defaultBareme.fraisGestion),
+    fraisAcquisition: Number(defaultBareme.fraisAcquisition),
+  } : {
+    tauxSansRisque: 0.02,
+    volatilite: 0.06,
+    fraisMutation: 0.20,
+    tauxActuariel: 0.035,
+    fraisGestion: 0.05,
+    fraisAcquisition: 0.03,
+  };
+
   return (
     <div className="mx-auto max-w-4xl p-6 md:p-8">
       <div className="mb-6">
@@ -40,7 +60,7 @@ export default async function AddParcellePage() {
           Remplissez les informations de la parcelle et définissez ses limites géographiques
         </p>
       </div>
-      <AddParcelleForm pointsOfSale={pointsOfSale} zones={formattedZones} />
+      <AddParcelleForm pointsOfSale={pointsOfSale} zones={formattedZones} defaultBareme={formattedBareme} />
     </div>
   );
 }

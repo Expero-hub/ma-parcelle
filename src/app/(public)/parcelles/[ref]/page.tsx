@@ -35,19 +35,25 @@ async function fetchParcelle(rawRef: string): Promise<(Parcelle & { imagesList?:
   }
 
   try {
-    const dbParcelle = await prisma.parcelle.findFirst({
-      where: {
-        deletedAt: null,
-        OR: [
-          { reference: decodedRef },
-          { reference: rawRef },
-        ],
-      },
-      include: {
-        zone: true,
-        images: { orderBy: { order: "asc" } },
-      },
-    });
+    const [dbParcelle, defaultBareme] = await Promise.all([
+      prisma.parcelle.findFirst({
+        where: {
+          deletedAt: null,
+          OR: [
+            { reference: decodedRef },
+            { reference: rawRef },
+          ],
+        },
+        include: {
+          zone: true,
+          images: { orderBy: { order: "asc" } },
+        },
+      }),
+      prisma.baremeTechniqueDefaut.findFirst({
+        where: { isActive: true },
+        orderBy: { effectiveFrom: "desc" },
+      }),
+    ]);
 
     if (dbParcelle) {
       let statut: Statut = "disponible";
@@ -58,6 +64,23 @@ async function fetchParcelle(rawRef: string): Promise<(Parcelle & { imagesList?:
       const lng = dbParcelle.zone?.longitude ? Number(dbParcelle.zone.longitude) : 2.35;
 
       const imgPaths = dbParcelle.images.map((img) => img.path);
+
+      // Default values fallback
+      const defaultBaremeVal = defaultBareme ? {
+        tauxSansRisque: Number(defaultBareme.tauxSansRisque),
+        volatilite: Number(defaultBareme.volatilite),
+        fraisMutation: Number(defaultBareme.fraisMutation),
+        tauxActuariel: Number(defaultBareme.tauxActuariel),
+        fraisGestion: Number(defaultBareme.fraisGestion),
+        fraisAcquisition: Number(defaultBareme.fraisAcquisition),
+      } : {
+        tauxSansRisque: 0.02,
+        volatilite: 0.06,
+        fraisMutation: 0.20,
+        tauxActuariel: 0.035,
+        fraisGestion: 0.05,
+        fraisAcquisition: 0.03,
+      };
 
       return {
         ref: dbParcelle.reference,
@@ -77,6 +100,12 @@ async function fetchParcelle(rawRef: string): Promise<(Parcelle & { imagesList?:
         imagesList: imgPaths,
         minDuration: dbParcelle.minDuration ?? 1,
         maxDuration: dbParcelle.maxDuration ?? 5,
+        tauxSansRisque: dbParcelle.tauxSansRisque !== null ? Number(dbParcelle.tauxSansRisque) : defaultBaremeVal.tauxSansRisque,
+        volatilite: dbParcelle.volatilite !== null ? Number(dbParcelle.volatilite) : defaultBaremeVal.volatilite,
+        fraisMutation: dbParcelle.fraisMutation !== null ? Number(dbParcelle.fraisMutation) : defaultBaremeVal.fraisMutation,
+        tauxActuariel: dbParcelle.tauxActuariel !== null ? Number(dbParcelle.tauxActuariel) : defaultBaremeVal.tauxActuariel,
+        fraisGestion: dbParcelle.fraisGestion !== null ? Number(dbParcelle.fraisGestion) : defaultBaremeVal.fraisGestion,
+        fraisAcquisition: dbParcelle.fraisAcquisition !== null ? Number(dbParcelle.fraisAcquisition) : defaultBaremeVal.fraisAcquisition,
       };
     }
   } catch (error) {

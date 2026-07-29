@@ -9,6 +9,9 @@ import { BrandLogo } from "@/components/shared/brand-logo";
 
 function isActive(pathname: string, url: string | null): boolean {
   if (!url) return false;
+  if (url === "/dashboard" || url === "/mon-espace") {
+    return pathname === url;
+  }
   return pathname === url || pathname.startsWith(url + "/");
 }
 

@@ -38,6 +38,13 @@ model Parcelle {
   maxDuration   Int?            @map("max_duration")
   minDuration   Int?            @map("min_duration")
   pointOfSaleId String?         @map("point_of_sale_id")
+
+  tauxSansRisque   Decimal? @db.Decimal(6, 4) @map("taux_sans_risk")
+  volatilite       Decimal? @db.Decimal(6, 4) @map("volatilite")
+  fraisMutation    Decimal? @db.Decimal(6, 4) @map("frais_mutation")
+  tauxActuariel    Decimal? @db.Decimal(6, 4) @map("taux_actuariel")
+  fraisGestion     Decimal? @db.Decimal(6, 4) @map("frais_gestion")
+  fraisAcquisition Decimal? @db.Decimal(6, 4) @map("frais_acquisition")
   contracts     Contract[]
   images        ParcelleImage[]
   createdBy     User?           @relation("ParcelleCreatedBy", fields: [createdById], references: [id])
@@ -71,4 +78,25 @@ enum ParcelleStatus {
   AVAILABLE
   RESERVED
   SOLD
+}
+
+model BaremeTechniqueDefaut {
+  id    String @id @default(cuid())
+  label String @default("Défaut")
+
+  tauxSansRisque   Decimal @default(0.02)  @db.Decimal(6, 4) @map("taux_sans_risk")
+  volatilite       Decimal @default(0.06)  @db.Decimal(6, 4) @map("volatilite")
+  fraisMutation    Decimal @default(0.20)  @db.Decimal(6, 4) @map("frais_mutation")
+  tauxActuariel    Decimal @default(0.035) @db.Decimal(6, 4) @map("taux_actuariel")
+  fraisGestion     Decimal @default(0.05)  @db.Decimal(6, 4) @map("frais_gestion")
+  fraisAcquisition Decimal @default(0.03)  @db.Decimal(6, 4) @map("frais_acquisition")
+
+  isActive      Boolean  @default(true) @map("is_active")
+  effectiveFrom DateTime @default(now()) @map("effective_from")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+  @@map("baremes_techniques_defaut")
 }
