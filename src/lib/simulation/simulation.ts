@@ -280,7 +280,7 @@ export function simulerPrimeParcelle(input: SimulationInput): SimulationResult {
 }
 
 function arrondi(valeur: number): number {
-  return Math.round(valeur / 100) * 100;
+  return Math.round(valeur * 100) / 100;
 }
 
 /**
@@ -314,10 +314,10 @@ export function computeDisplayedPrice(p: {
 
     const primeParEcheance = calculerPrimeParcelle(S0, k, t, r, sigma, fm, x, it, fg, fa, freq, true);
     const nombreEcheancesTotal = t * freq;
-    return Math.round((primeParEcheance * nombreEcheancesTotal) / 100) * 100;
+    return Math.round(primeParEcheance * nombreEcheancesTotal * 100) / 100;
   } catch (err) {
     console.error("Erreur computeDisplayedPrice:", err);
-    return Math.round(Number(p.price) / 100) * 100;
+    return Math.round(Number(p.price) * 100) / 100;
   }
 }
 
