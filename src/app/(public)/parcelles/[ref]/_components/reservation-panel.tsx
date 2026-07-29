@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 
 import { useSession } from "@/lib/auth-client";
@@ -17,6 +18,7 @@ type Step = "idle" | "form" | "done";
 
 export function ReservationPanel({ p }: { p: Parcelle }) {
   const { data: session } = useSession();
+  const pathname = usePathname();
   const [step, setStep] = useState<Step>("idle");
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -84,7 +86,7 @@ export function ReservationPanel({ p }: { p: Parcelle }) {
             {!session && (
               <div className="mt-2">
                 <Link
-                  href="/connexion"
+                  href={`/connexion?redirect=${encodeURIComponent(pathname)}`}
                   className="font-bold underline text-primary"
                 >
                   Se connecter

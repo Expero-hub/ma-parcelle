@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
@@ -12,8 +13,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Eye, EyeOff } from "lucide-react";
 
-export default function ConnexionPage() {
+function ConnexionForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [formError, setFormError] = useState<string | null>(null);
   // Reste vrai pendant la redirection (le composant n'est démonté qu'à l'arrivée
   // sur la nouvelle page) → empêche un second clic et garde le bouton en chargement.
@@ -35,7 +37,13 @@ export default function ConnexionPage() {
     const session = await authClient.getSession();
     const role = session.data?.user.role;
     setRedirecting(true);
-    router.push(role === "admin" || role === "staff" ? "/dashboard" : "/mon-espace");
+
+    const redirectUrl = searchParams.get("redirect");
+    if (redirectUrl) {
+      router.push(redirectUrl);
+    } else {
+      router.push(role === "admin" || role === "staff" ? "/dashboard" : "/mon-espace");
+    }
     router.refresh();
   }
 
@@ -86,5 +94,13 @@ export default function ConnexionPage() {
         </Button>
       </form>
     </div>
+  );
+}
+
+export default function ConnexionPage() {
+  return (
+    <Suspense fallback={null}>
+      <ConnexionForm />
+    </Suspense>
   );
 }
