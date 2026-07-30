@@ -67,21 +67,8 @@ function erf(x: number): number {
  * Fonction de répartition de la loi normale centrée réduite N(0,1).
  * Équivalent Excel : NORM.S.DIST(x, TRUE)
  */
-function normaleStandard_old(x: number): number {
-  return 0.5 * (1 + erf(x / Math.SQRT2));
-}
-
 function normaleStandard(x: number): number {
-  const t = 1 / (1 + 0.2316419 * Math.abs(x));
-  const d = 0.3989423 * Math.exp((-x * x) / 2);
-
-  const p =
-    d *
-    t *
-    (0.3193815 +
-      t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
-
-  return x >= 0 ? 1 - p : p;
+  return 0.5 * (1 + erf(x / Math.SQRT2));
 }
 
 /**
@@ -188,8 +175,7 @@ function calculerPrimeParcelle(
   const PAC = PAI / (1 - fa);
   const a_m = (1 - v) / (1 - Math.pow(v, 1 / freq));
 
-  return N_d1;
-  // return PAC / a_m;
+  return PAC / a_m;
 }
 
 // ============================================================
@@ -294,13 +280,19 @@ export function simulerPrimeParcelle(input: SimulationInput): SimulationResult {
 }
 
 function arrondi(valeur: number): number {
-  return Math.round(valeur * 100) / 100;
+  return Math.round(valeur / 100) * 100;
 }
+
+/**
+ * Âge de référence utilisé pour les simulations de prix par défaut (affichage public).
+ * Vous pouvez modifier cette valeur (ex: 35, 63, etc.) selon vos besoins de comparaison.
+ */
+export const DEFAULT_SIMULATION_AGE = 35;
 
 /**
  * Calcule le prix simulé d'affichage pour une parcelle.
  * Ce prix simule un contrat sur la durée maximale de 7 ans,
- * avec garantie de décès activée (pour un âge de référence de 35 ans),
+ * avec garantie de décès activée (pour un âge de référence défini par DEFAULT_SIMULATION_AGE),
  * mensuelle, incluant tous les frais de barème.
  * Arrondi à la centaine près.
  */
@@ -317,7 +309,7 @@ export function computeDisplayedPrice(p: {
     const S0 = Number(p.price);
     const k = S0;
     const t = 7; // Durée max
-    const x = 35; // Âge standard
+    const x = DEFAULT_SIMULATION_AGE; // Âge standard
     const freq = 12; // Mensuel
     const r = p.tauxSansRisque ?? 0.02;
     const sigma = p.volatilite ?? 0.06;
@@ -328,10 +320,43 @@ export function computeDisplayedPrice(p: {
 
     const primeParEcheance = calculerPrimeParcelle(S0, k, t, r, sigma, fm, x, it, fg, fa, freq, true);
     const nombreEcheancesTotal = t * freq;
-    return Math.round(primeParEcheance * nombreEcheancesTotal * 100) / 100;
+    return Math.round((primeParEcheance * nombreEcheancesTotal) / 100) * 100;
   } catch (err) {
     console.error("Erreur computeDisplayedPrice:", err);
-    return Math.round(Number(p.price) * 100) / 100;
+    return Math.round(Number(p.price) / 100) * 100;
+  }
+}
+
+/**
+ * Calcule la mensualité sur 7 ans avec garantie de décès (âge défini par DEFAULT_SIMULATION_AGE) pour une parcelle.
+ */
+export function calculateMonthlyPayment7Years(p: {
+  price: number;
+  tauxSansRisque?: number | null;
+  volatilite?: number | null;
+  fraisMutation?: number | null;
+  tauxActuariel?: number | null;
+  fraisGestion?: number | null;
+  fraisAcquisition?: number | null;
+}): number {
+  try {
+    const S0 = Number(p.price);
+    const k = S0;
+    const t = 7;
+    const x = DEFAULT_SIMULATION_AGE;
+    const freq = 12;
+    const r = p.tauxSansRisque ?? 0.02;
+    const sigma = p.volatilite ?? 0.06;
+    const fm = p.fraisMutation ?? 0.20;
+    const it = p.tauxActuariel ?? 0.035;
+    const fg = p.fraisGestion ?? 0.05;
+    const fa = p.fraisAcquisition ?? 0.03;
+
+    const primeParEcheance = calculerPrimeParcelle(S0, k, t, r, sigma, fm, x, it, fg, fa, freq, true);
+    return arrondi(primeParEcheance);
+  } catch (err) {
+    console.error("Erreur calculateMonthlyPayment7Years:", err);
+    return Math.round(Number(p.price) / 84);
   }
 }
 

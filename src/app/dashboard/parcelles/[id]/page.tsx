@@ -369,12 +369,6 @@ export default async function ParcelleDetailPage({ params }: PageProps) {
                 <h3 className="font-display font-bold text-text">Aucun contrat lié</h3>
                 <p className="text-xs text-text-2 mt-1">Cette parcelle est libre pour de nouvelles acquisitions.</p>
               </div>
-              <Link
-                href={`/dashboard/reservations/nouveau?parcelleId=${parcelle.id}`}
-                className="block w-full rounded-lg bg-primary py-2.5 text-center text-sm font-semibold text-on-primary hover:bg-primary/95 transition-colors"
-              >
-                Faire une réservation
-              </Link>
             </div>
           )}
 

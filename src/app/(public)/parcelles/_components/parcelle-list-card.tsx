@@ -93,9 +93,6 @@ export function ParcelleListCard({
             {p.surf} m²
           </span>
           <span className="rounded-md bg-surface-2 px-2 py-1 font-sans text-[11px] font-medium text-text-2">
-            {fmtFCFA(pricePerM2(p))} F/m²
-          </span>
-          <span className="rounded-md bg-surface-2 px-2 py-1 font-sans text-[11px] font-medium text-text-2">
             {p.paiement}
           </span>
         </div>
@@ -103,8 +100,8 @@ export function ParcelleListCard({
         <div className="mt-auto flex flex-wrap items-end justify-between gap-2 border-t border-border pt-2.5">
           <div className="min-w-0">
             <div className="font-mono text-[16px] font-semibold text-text">
-              {fmtFCFA(p.price)}{" "}
-              <span className="text-[10px] text-text-2">FCFA</span>
+              {fmtFCFA(p.monthlyPayment7Years ?? 0)}{" "}
+              <span className="text-[10px] text-text-2">F/mois sur 7 ans</span>
             </div>
           </div>
           <button

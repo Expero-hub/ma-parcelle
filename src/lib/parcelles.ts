@@ -14,6 +14,19 @@ export interface Parcelle {
   surf: number;
   price: number;
   rawPrice?: number;
+  monthlyPayment7Years?: number;
+  pointOfSale?: {
+    id: string;
+    name: string;
+    phone: string | null;
+    address: string | null;
+    agency: {
+      id: string;
+      name: string;
+      phone: string | null;
+      address: string | null;
+    };
+  } | null;
   statut: Statut;
   verifie: boolean;
   paiement: "Échelonné" | "Comptant" | "—";

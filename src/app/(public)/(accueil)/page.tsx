@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { computeDisplayedPrice } from "@/lib/simulation/simulation";
+import { computeDisplayedPrice, calculateMonthlyPayment7Years } from "@/lib/simulation/simulation";
 import { SiteFooter } from "@/components/shared/site-footer";
 import { Hero } from "./_components/hero";
 import { KeyStats } from "./_components/key-stats";
@@ -22,6 +22,9 @@ export default async function Home() {
         include: {
           zone: true,
           images: { orderBy: { order: "asc" } },
+          pointOfSale: {
+            include: { agency: true },
+          },
         },
       }),
       prisma.zone.findMany({
@@ -43,6 +46,16 @@ export default async function Home() {
         fraisAcquisition: p.fraisAcquisition !== null ? Number(p.fraisAcquisition) : null,
       });
 
+      const monthlyPayment7Years = calculateMonthlyPayment7Years({
+        price: rawPrice,
+        tauxSansRisque: p.tauxSansRisque !== null ? Number(p.tauxSansRisque) : null,
+        volatilite: p.volatilite !== null ? Number(p.volatilite) : null,
+        fraisMutation: p.fraisMutation !== null ? Number(p.fraisMutation) : null,
+        tauxActuariel: p.tauxActuariel !== null ? Number(p.tauxActuariel) : null,
+        fraisGestion: p.fraisGestion !== null ? Number(p.fraisGestion) : null,
+        fraisAcquisition: p.fraisAcquisition !== null ? Number(p.fraisAcquisition) : null,
+      });
+
       return {
         id: p.id,
         reference: p.reference,
@@ -50,6 +63,21 @@ export default async function Home() {
         area: Number(p.area),
         price: displayedPrice,
         rawPrice: rawPrice,
+        monthlyPayment7Years,
+        pointOfSale: p.pointOfSale
+          ? {
+              id: p.pointOfSale.id,
+              name: p.pointOfSale.name,
+              phone: p.pointOfSale.phone,
+              address: p.pointOfSale.address,
+              agency: {
+                id: p.pointOfSale.agency.id,
+                name: p.pointOfSale.agency.name,
+                phone: p.pointOfSale.agency.phone,
+                address: p.pointOfSale.agency.address,
+              },
+            }
+          : null,
         zone: p.zone
           ? {
               district: p.zone.district,

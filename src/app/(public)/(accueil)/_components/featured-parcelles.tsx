@@ -83,11 +83,10 @@ function FeaturedCard({ p, i }: { p: any; i: number }) {
           </div>
 
           <div className="mt-4 font-sans text-sm text-text-2">
-            A partir de:{" "}
             <span className="font-bold text-emerald-500">
-              {fmtFCFA(dailyRate > 0 ? dailyRate : price)} FCFA
+              {fmtFCFA(p.monthlyPayment7Years ?? 0)} F/mois
             </span>{" "}
-            / jrs
+            sur 7 ans · {Math.round(area)} m²
           </div>
 
           {/* Detail CTA Button */}

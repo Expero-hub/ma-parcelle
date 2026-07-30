@@ -158,7 +158,7 @@ export function CadastreMap({
                     {p.ville} · {p.quartier}
                   </div>
                   <div style={{ fontSize: 12, color: "#5A554C" }}>
-                    {p.surf} m² · {fmtFCFA(p.price)} FCFA
+                    {p.surf} m² · {fmtFCFA(p.monthlyPayment7Years ?? 0)} F/mois sur 7 ans
                   </div>
                   <a
                     href={`/parcelles/${p.ref}`}

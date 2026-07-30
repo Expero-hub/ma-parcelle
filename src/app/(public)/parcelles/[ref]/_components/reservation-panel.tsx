@@ -68,13 +68,13 @@ export function ReservationPanel({ p }: { p: Parcelle }) {
       <div className="flex flex-col gap-4 rounded-[18px] border border-border bg-surface p-[22px] shadow-[var(--shadow)]">
         <div>
           <div className="mb-[5px] font-sans text-xs text-text-2">
-            Prix de la parcelle
+            Financement à partir de
           </div>
           <div className="font-mono text-3xl leading-none font-semibold text-text">
-            {fmtFCFA(p.price)} FCFA
+            {fmtFCFA(p.monthlyPayment7Years ?? 0)} F/mois
           </div>
           <div className="mt-[6px] font-sans text-[12.5px] text-text-2">
-            {fmtFCFA(pricePerM2(p))} F/m² · {p.surf} m²
+            sur 7 ans · {p.surf} m²
           </div>
         </div>
 

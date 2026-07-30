@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
 import { PARCELLES, getParcelle, type Parcelle, type Statut } from "@/lib/parcelles";
-import { computeDisplayedPrice } from "@/lib/simulation/simulation";
+import { computeDisplayedPrice, calculateMonthlyPayment7Years } from "@/lib/simulation/simulation";
 import { CadastralPlan } from "./_components/cadastral-plan";
 import { DetailHeader } from "./_components/detail-header";
 import { DocumentsList } from "./_components/documents-list";
@@ -48,6 +48,9 @@ async function fetchParcelle(rawRef: string): Promise<(Parcelle & { imagesList?:
         include: {
           zone: true,
           images: { orderBy: { order: "asc" } },
+          pointOfSale: {
+            include: { agency: true },
+          },
         },
       }),
       prisma.baremeTechniqueDefaut.findFirst({
@@ -94,6 +97,16 @@ async function fetchParcelle(rawRef: string): Promise<(Parcelle & { imagesList?:
         fraisAcquisition: dbParcelle.fraisAcquisition !== null ? Number(dbParcelle.fraisAcquisition) : defaultBaremeVal.fraisAcquisition,
       });
 
+      const monthlyPayment7Years = calculateMonthlyPayment7Years({
+        price: rawPrice,
+        tauxSansRisque: dbParcelle.tauxSansRisque !== null ? Number(dbParcelle.tauxSansRisque) : defaultBaremeVal.tauxSansRisque,
+        volatilite: dbParcelle.volatilite !== null ? Number(dbParcelle.volatilite) : defaultBaremeVal.volatilite,
+        fraisMutation: dbParcelle.fraisMutation !== null ? Number(dbParcelle.fraisMutation) : defaultBaremeVal.fraisMutation,
+        tauxActuariel: dbParcelle.tauxActuariel !== null ? Number(dbParcelle.tauxActuariel) : defaultBaremeVal.tauxActuariel,
+        fraisGestion: dbParcelle.fraisGestion !== null ? Number(dbParcelle.fraisGestion) : defaultBaremeVal.fraisGestion,
+        fraisAcquisition: dbParcelle.fraisAcquisition !== null ? Number(dbParcelle.fraisAcquisition) : defaultBaremeVal.fraisAcquisition,
+      });
+
       return {
         ref: dbParcelle.reference,
         ville: dbParcelle.zone?.commune || dbParcelle.zone?.department || "Bénin",
@@ -101,6 +114,21 @@ async function fetchParcelle(rawRef: string): Promise<(Parcelle & { imagesList?:
         surf: Number(dbParcelle.area),
         price: displayedPrice,
         rawPrice: rawPrice,
+        monthlyPayment7Years,
+        pointOfSale: dbParcelle.pointOfSale
+          ? {
+              id: dbParcelle.pointOfSale.id,
+              name: dbParcelle.pointOfSale.name,
+              phone: dbParcelle.pointOfSale.phone,
+              address: dbParcelle.pointOfSale.address,
+              agency: {
+                id: dbParcelle.pointOfSale.agency.id,
+                name: dbParcelle.pointOfSale.agency.name,
+                phone: dbParcelle.pointOfSale.agency.phone,
+                address: dbParcelle.pointOfSale.agency.address,
+              },
+            }
+          : null,
         statut,
         verifie: dbParcelle.titleVerified ?? true,
         paiement: "Échelonné",
@@ -131,6 +159,15 @@ async function fetchParcelle(rawRef: string): Promise<(Parcelle & { imagesList?:
       ...fallback,
       rawPrice: fallback.price,
       price: computeDisplayedPrice({
+        price: fallback.price,
+        tauxSansRisque: fallback.tauxSansRisque,
+        volatilite: fallback.volatilite,
+        fraisMutation: fallback.fraisMutation,
+        tauxActuariel: fallback.tauxActuariel,
+        fraisGestion: fallback.fraisGestion,
+        fraisAcquisition: fallback.fraisAcquisition,
+      }),
+      monthlyPayment7Years: calculateMonthlyPayment7Years({
         price: fallback.price,
         tauxSansRisque: fallback.tauxSansRisque,
         volatilite: fallback.volatilite,

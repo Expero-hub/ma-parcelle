@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
 import { PARCELLES, type Parcelle, type Statut } from "@/lib/parcelles";
 import { ParcellesView } from "./_components/parcelles-view";
-import { computeDisplayedPrice } from "@/lib/simulation/simulation";
+import { computeDisplayedPrice, calculateMonthlyPayment7Years } from "@/lib/simulation/simulation";
 
 export const metadata: Metadata = {
   title: "Parcelles · Ma Parcelle",
@@ -23,6 +23,9 @@ export default async function ParcellesPage() {
         include: {
           zone: true,
           images: { orderBy: { order: "asc" } },
+          pointOfSale: {
+            include: { agency: true },
+          },
         },
         orderBy: { createdAt: "desc" },
       }),
@@ -60,6 +63,16 @@ export default async function ParcellesPage() {
           fraisAcquisition: p.fraisAcquisition !== null ? Number(p.fraisAcquisition) : null,
         });
 
+        const monthlyPayment7Years = calculateMonthlyPayment7Years({
+          price: rawPrice,
+          tauxSansRisque: p.tauxSansRisque !== null ? Number(p.tauxSansRisque) : null,
+          volatilite: p.volatilite !== null ? Number(p.volatilite) : null,
+          fraisMutation: p.fraisMutation !== null ? Number(p.fraisMutation) : null,
+          tauxActuariel: p.tauxActuariel !== null ? Number(p.tauxActuariel) : null,
+          fraisGestion: p.fraisGestion !== null ? Number(p.fraisGestion) : null,
+          fraisAcquisition: p.fraisAcquisition !== null ? Number(p.fraisAcquisition) : null,
+        });
+
         return {
           ref: p.reference,
           ville: p.zone?.commune || p.zone?.department || "Bénin",
@@ -67,6 +80,21 @@ export default async function ParcellesPage() {
           surf: Number(p.area),
           price: displayedPrice,
           rawPrice: rawPrice,
+          monthlyPayment7Years,
+          pointOfSale: p.pointOfSale
+            ? {
+                id: p.pointOfSale.id,
+                name: p.pointOfSale.name,
+                phone: p.pointOfSale.phone,
+                address: p.pointOfSale.address,
+                agency: {
+                  id: p.pointOfSale.agency.id,
+                  name: p.pointOfSale.agency.name,
+                  phone: p.pointOfSale.agency.phone,
+                  address: p.pointOfSale.agency.address,
+                },
+              }
+            : null,
           statut,
           verifie: p.titleVerified ?? true,
           paiement: "Échelonné",
@@ -90,6 +118,15 @@ export default async function ParcellesPage() {
       ...p,
       rawPrice: p.price,
       price: computeDisplayedPrice({
+        price: p.price,
+        tauxSansRisque: p.tauxSansRisque,
+        volatilite: p.volatilite,
+        fraisMutation: p.fraisMutation,
+        tauxActuariel: p.tauxActuariel,
+        fraisGestion: p.fraisGestion,
+        fraisAcquisition: p.fraisAcquisition,
+      }),
+      monthlyPayment7Years: calculateMonthlyPayment7Years({
         price: p.price,
         tauxSansRisque: p.tauxSansRisque,
         volatilite: p.volatilite,

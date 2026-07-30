@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Calculator, X, Phone, Mail, MapPin } from "lucide-react";
 import { fmtFCFA, type Parcelle } from "@/lib/parcelles";
@@ -25,6 +25,8 @@ export function FinancementModal({ parcelle }: FinancementModalProps) {
   const [garantieDeces, setGarantieDeces] = useState<boolean>(false);
   const [simulationResult, setSimulationResult] = useState<SimulationResult | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const resultRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -101,6 +103,9 @@ export function FinancementModal({ parcelle }: FinancementModalProps) {
       });
 
       setSimulationResult(res);
+      setTimeout(() => {
+        resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
     } catch (err: any) {
       setErrorMsg(err.message || "Une erreur est survenue lors de la simulation.");
     }
@@ -287,7 +292,7 @@ export function FinancementModal({ parcelle }: FinancementModalProps) {
 
             {/* Simulation Result */}
             {simulationResult && (
-              <div className="mt-6 border-t border-border pt-6 animate-[fadeUp_.3s_ease_both] space-y-4">
+              <div ref={resultRef} className="mt-6 border-t border-border pt-6 animate-[fadeUp_.3s_ease_both] space-y-4">
                 <h3 className="font-display text-lg font-semibold text-primary">
                   Résultat de la simulation
                 </h3>
@@ -348,15 +353,15 @@ export function FinancementModal({ parcelle }: FinancementModalProps) {
                   </div>
 
                   <div className="space-y-3">
-                    {/* Service Commercial */}
+                    {/* Service Commercial / Agence Phone */}
                     <div className="flex items-start gap-3 rounded-xl border border-border bg-surface-2/40 p-4 transition-colors hover:bg-surface-2/60">
                       <Phone className="h-5 w-5 text-primary dark:text-primary/90 shrink-0 mt-0.5" />
                       <div>
                         <h5 className="font-display text-sm font-bold text-text">
-                          Service Commercial
+                          {parcelle.pointOfSale?.agency.name ?? "Service Commercial"}
                         </h5>
                         <p className="font-mono text-sm font-semibold text-text mt-1">
-                          +229 01 23 45 67 89
+                          {parcelle.pointOfSale?.agency.phone ?? "+229 01 23 45 67 89"}
                         </p>
                         <p className="font-sans text-xs text-text-2 mt-0.5">
                           Lun-Ven: 9h-18h
@@ -364,34 +369,15 @@ export function FinancementModal({ parcelle }: FinancementModalProps) {
                       </div>
                     </div>
 
-                    {/* Email */}
-                    <div className="flex items-start gap-3 rounded-xl border border-border bg-surface-2/40 p-4 transition-colors hover:bg-surface-2/60">
-                      <Mail className="h-5 w-5 text-primary dark:text-primary/90 shrink-0 mt-0.5" />
-                      <div>
-                        <h5 className="font-display text-sm font-bold text-text">
-                          Email
-                        </h5>
-                        <p className="font-mono text-sm font-semibold text-text mt-1">
-                          financement@parcelles.fr
-                        </p>
-                        <p className="font-sans text-xs text-text-2 mt-0.5">
-                          Réponse sous 24h
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Agence */}
+                    {/* Adresse Agence */}
                     <div className="flex items-start gap-3 rounded-xl border border-border bg-surface-2/40 p-4 transition-colors hover:bg-surface-2/60">
                       <MapPin className="h-5 w-5 text-primary dark:text-primary/90 shrink-0 mt-0.5" />
                       <div>
                         <h5 className="font-display text-sm font-bold text-text">
-                          Agence
+                          Adresse de l'Agence
                         </h5>
                         <p className="font-sans text-sm font-semibold text-text mt-1">
-                          123 Avenue des Parcelles
-                        </p>
-                        <p className="font-sans text-xs text-text-2 mt-0.5">
-                          75001 Paris
+                          {parcelle.pointOfSale?.agency.address ?? "Non renseignée"}
                         </p>
                       </div>
                     </div>

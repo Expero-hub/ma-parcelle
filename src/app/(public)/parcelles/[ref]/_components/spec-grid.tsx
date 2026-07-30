@@ -8,7 +8,7 @@ import {
 export function SpecGrid({ p }: { p: Parcelle }) {
   const specs = [
     { k: "Superficie", v: `${p.surf} m²` },
-    { k: "Prix au m²", v: `${fmtFCFA(pricePerM2(p))} F` },
+    { k: "Financement sur 7 ans", v: `${fmtFCFA(p.monthlyPayment7Years ?? 0)} F/mois` },
     { k: "Ville", v: p.ville },
     { k: "Quartier", v: p.quartier },
     { k: "Statut", v: STATUT_META[p.statut].label },
