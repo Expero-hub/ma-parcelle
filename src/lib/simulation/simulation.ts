@@ -23,6 +23,11 @@ import {
   libelleFrequence,
 } from './simulation.types';
 
+import { cumulativeStdNormalProbability } from 'simple-statistics';
+
+
+
+
 // ============================================================
 // 1. Table de mortalité CIMA H (L(x) = nombre de survivants à l'âge x)
 //    Index 0 = L(0). Constante actuarielle, ne dépend d'aucun fichier Excel.
@@ -69,8 +74,9 @@ function erf(x: number): number {
  * Équivalent Excel : NORM.S.DIST(x, TRUE)
  */
 function normaleStandard(x: number): number {
-  return 0.5 * (1 + erf(x / Math.SQRT2));
+   return 0.5 * (1 + erf(x / Math.SQRT2));
 }
+
 
 /**
  * Valeur actuelle d'une rente certaine de t termes, au taux i.
@@ -199,6 +205,11 @@ function calculerPrimeParcelle(
       PAI,
       PAC,
       a_m,
+      t,
+      sigma,
+      r,
+      fm,
+      x,
     },
   };
 }

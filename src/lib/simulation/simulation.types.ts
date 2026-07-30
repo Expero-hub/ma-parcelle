@@ -122,6 +122,12 @@ export interface SimulationDebugDetails {
   PAI: number;
   PAC: number;
   a_m: number;
+  sigma:number;
+  r:number;
+  t:number;
+  fm:number;
+  x:number;
+  
 }
 
 export interface SimulationResult {

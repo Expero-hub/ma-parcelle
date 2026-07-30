@@ -405,6 +405,18 @@ export function FinancementModal({ parcelle }: FinancementModalProps) {
                         <span>Ajustement fréquence (a_m)</span>
                         <span className="font-semibold text-text">{simulationResult.debugDetails.a_m.toFixed(8)}</span>
                       </div>
+                      <div className="flex justify-between border-b border-border/40 pb-1">
+                        <span>Sigma (sigma)</span>
+                        <span className="font-semibold text-text">{simulationResult.debugDetails.sigma === undefined ? 0 : simulationResult.debugDetails.sigma.toFixed(8)}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-border/40 pb-1">
+                        <span>r</span>
+                        <span className="font-semibold text-text">{simulationResult.debugDetails.r === undefined ? 0 : simulationResult.debugDetails.r.toFixed(8)}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-border/40 pb-1">
+                        <span>t</span>
+                        <span className="font-semibold text-text">{simulationResult.debugDetails.t === undefined ? 0 : simulationResult.debugDetails.t.toFixed(8)}</span>
+                      </div>
                     </div>
                   </details>
                 )}
