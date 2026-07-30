@@ -338,6 +338,77 @@ export function FinancementModal({ parcelle }: FinancementModalProps) {
                   </div>
                 </div>
 
+                {/* Debug details collapsible section */}
+                {simulationResult.debugDetails && (
+                  <details className="mt-4 border border-dashed border-border/80 rounded-xl p-3 bg-surface-2/20">
+                    <summary className="cursor-pointer font-sans text-xs font-semibold text-text-2 focus:outline-none select-none">
+                      Détails techniques du calcul (Debug)
+                    </summary>
+                    <div className="mt-3 space-y-2 font-mono text-[11px] text-text-2">
+                      <div className="flex justify-between border-b border-border/40 pb-1">
+                        <span>Taux d'actualisation (v)</span>
+                        <span className="font-semibold text-text">{simulationResult.debugDetails.v.toFixed(8)}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-border/40 pb-1">
+                        <span>Rente viagère (axn)</span>
+                        <span className="font-semibold text-text">{simulationResult.debugDetails.axn.toFixed(8)}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-border/40 pb-1">
+                        <span>Rente certaine (a_t)</span>
+                        <span className="font-semibold text-text">{simulationResult.debugDetails.a_t.toFixed(8)}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-border/40 pb-1">
+                        <span>Prime Épargne (brute)</span>
+                        <span className="font-semibold text-text">{simulationResult.debugDetails.P_epargne.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-border/40 pb-1">
+                        <span>Prime Mutation (brute)</span>
+                        <span className="font-semibold text-text">{simulationResult.debugDetails.P_mutation.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-border/40 pb-1">
+                        <span>d1 (Black-Scholes)</span>
+                        <span className="font-semibold text-text">{simulationResult.debugDetails.d1.toFixed(8)}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-border/40 pb-1">
+                        <span>d2 (Black-Scholes)</span>
+                        <span className="font-semibold text-text">{simulationResult.debugDetails.d2.toFixed(8)}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-border/40 pb-1">
+                        <span>N(d1)</span>
+                        <span className="font-semibold text-text">{simulationResult.debugDetails.N_d1.toFixed(8)}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-border/40 pb-1">
+                        <span>N(d2)</span>
+                        <span className="font-semibold text-text">{simulationResult.debugDetails.N_d2.toFixed(8)}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-border/40 pb-1">
+                        <span>Prime Call (Black-Scholes)</span>
+                        <span className="font-semibold text-text">{simulationResult.debugDetails.P_call.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-border/40 pb-1">
+                        <span>PUP Décès (cumulé)</span>
+                        <span className="font-semibold text-text">{simulationResult.debugDetails.PUP_deces.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-border/40 pb-1">
+                        <span>PUI (Prime Unique Inventaire)</span>
+                        <span className="font-semibold text-text">{simulationResult.debugDetails.PUI.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-border/40 pb-1">
+                        <span>PAI (Prime Annuelle Inventaire)</span>
+                        <span className="font-semibold text-text">{simulationResult.debugDetails.PAI.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-border/40 pb-1">
+                        <span>PAC (Prime Annuelle Commerciale)</span>
+                        <span className="font-semibold text-text">{simulationResult.debugDetails.PAC.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-border/40 pb-1">
+                        <span>Ajustement fréquence (a_m)</span>
+                        <span className="font-semibold text-text">{simulationResult.debugDetails.a_m.toFixed(8)}</span>
+                      </div>
+                    </div>
+                  </details>
+                )}
+
                 {/* Contacts Info Section */}
                 <div className="pt-2 border-t border-border space-y-4">
                   <div className="flex items-start gap-2.5 text-primary dark:text-primary/90">

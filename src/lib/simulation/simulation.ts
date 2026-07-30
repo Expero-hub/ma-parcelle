@@ -19,6 +19,7 @@ import {
   SimulationInput,
   SimulationParcelleParams,
   SimulationResult,
+  SimulationDebugDetails,
   libelleFrequence,
 } from './simulation.types';
 
@@ -117,7 +118,10 @@ function calculerPrimeParcelle(
   fa: number,
   freq: number,
   garantieDeces: boolean,
-): number {
+): {
+  premium: number;
+  debugDetails: SimulationDebugDetails;
+} {
   const v = 1 / (1 + it);
   const L = TABLE_MORTALITE;
   const ageMax = L.length - 1;
@@ -175,7 +179,28 @@ function calculerPrimeParcelle(
   const PAC = PAI / (1 - fa);
   const a_m = (1 - v) / (1 - Math.pow(v, 1 / freq));
 
-  return PAC / a_m;
+  const premium = PAC / a_m;
+
+  return {
+    premium,
+    debugDetails: {
+      v,
+      axn,
+      a_t,
+      P_epargne,
+      P_mutation,
+      d1,
+      d2,
+      N_d1,
+      N_d2,
+      P_call,
+      PUP_deces,
+      PUI,
+      PAI,
+      PAC,
+      a_m,
+    },
+  };
 }
 
 // ============================================================
@@ -250,7 +275,7 @@ export function simulerPrimeParcelle(input: SimulationInput): SimulationResult {
   const fg = parcelle.fraisGestion;
   const fa = parcelle.fraisAcquisition;
 
-  const primeParEcheance = calculerPrimeParcelle(
+  const { premium: primeParEcheance, debugDetails } = calculerPrimeParcelle(
     S0,
     k,
     t,
@@ -276,6 +301,7 @@ export function simulerPrimeParcelle(input: SimulationInput): SimulationResult {
     nombreEcheancesTotal,
     coutTotalEstime: arrondi(coutTotalEstime),
     parametresUtilises: { S0, k, t, x, freq, r, sigma, fm, it, fg, fa },
+    debugDetails,
   };
 }
 
@@ -318,7 +344,7 @@ export function computeDisplayedPrice(p: {
     const fg = p.fraisGestion ?? 0.05;
     const fa = p.fraisAcquisition ?? 0.03;
 
-    const primeParEcheance = calculerPrimeParcelle(S0, k, t, r, sigma, fm, x, it, fg, fa, freq, true);
+    const { premium: primeParEcheance } = calculerPrimeParcelle(S0, k, t, r, sigma, fm, x, it, fg, fa, freq, true);
     const nombreEcheancesTotal = t * freq;
     return Math.round((primeParEcheance * nombreEcheancesTotal) / 100) * 100;
   } catch (err) {
@@ -352,7 +378,7 @@ export function calculateMonthlyPayment7Years(p: {
     const fg = p.fraisGestion ?? 0.05;
     const fa = p.fraisAcquisition ?? 0.03;
 
-    const primeParEcheance = calculerPrimeParcelle(S0, k, t, r, sigma, fm, x, it, fg, fa, freq, true);
+    const { premium: primeParEcheance } = calculerPrimeParcelle(S0, k, t, r, sigma, fm, x, it, fg, fa, freq, true);
     return arrondi(primeParEcheance);
   } catch (err) {
     console.error("Erreur calculateMonthlyPayment7Years:", err);

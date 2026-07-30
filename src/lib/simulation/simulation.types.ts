@@ -106,6 +106,24 @@ export interface ParcelleTechnicalOverrides {
   fraisAcquisition?: number | null;
 }
 
+export interface SimulationDebugDetails {
+  v: number;
+  axn: number;
+  a_t: number;
+  P_epargne: number;
+  P_mutation: number;
+  d1: number;
+  d2: number;
+  N_d1: number;
+  N_d2: number;
+  P_call: number;
+  PUP_deces: number;
+  PUI: number;
+  PAI: number;
+  PAC: number;
+  a_m: number;
+}
+
 export interface SimulationResult {
   /** Montant à payer par échéance (résultat de la cellule G5 / a_m). */
   primeParEcheance: number;
@@ -131,4 +149,5 @@ export interface SimulationResult {
     fg: number;
     fa: number;
   };
+  debugDetails?: SimulationDebugDetails;
 }
