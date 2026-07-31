@@ -13,10 +13,15 @@ import {
 } from "@/lib/parcelles";
 
 import { FinancementModal } from "./financement-modal";
+import { MapPin, Phone } from "lucide-react";
+
+interface ReservationPanelProps {
+  p: Parcelle;
+}
 
 type Step = "idle" | "form" | "done";
 
-export function ReservationPanel({ p }: { p: Parcelle }) {
+export function ReservationPanel({ p }: ReservationPanelProps) {
   const { data: session } = useSession();
   const pathname = usePathname();
   const [step, setStep] = useState<Step>("idle");
@@ -49,7 +54,7 @@ export function ReservationPanel({ p }: { p: Parcelle }) {
       if (!res.ok || !data.success) {
         setErrorMessage(
           data.message ||
-            "Impossible de faire la réservation. Seuls les clients disposant d'un contrat en cours peuvent réserver.",
+          "Impossible de faire la réservation. Seuls les clients disposant d'un contrat en cours peuvent réserver.",
         );
       } else {
         setSuccessMessage(data.message);
@@ -140,20 +145,33 @@ export function ReservationPanel({ p }: { p: Parcelle }) {
           </div>
         )}
 
-        <div className="flex items-center gap-[10px] pt-1">
-          <a
-            href="#"
-            className="inline-flex flex-1 items-center justify-center gap-2 rounded-[10px] border border-border p-3 font-sans text-sm font-semibold text-secondary transition-colors hover:border-secondary"
-          >
-            <span className="size-2 rounded-full bg-secondary" />
-            WhatsApp
-          </a>
-          <a
-            href="#"
-            className="flex-1 rounded-[10px] border border-border p-3 text-center font-sans text-sm font-semibold text-text transition-colors hover:border-primary hover:text-primary"
-          >
-            Appeler
-          </a>
+        {/* Service Commercial / Agence Phone */}
+        <div className="flex items-start gap-3 rounded-xl border border-border bg-surface-2/40 p-4 transition-colors hover:bg-surface-2/60">
+          <Phone className="h-5 w-5 text-primary dark:text-primary/90 shrink-0 mt-0.5" />
+          <div>
+            <h5 className="font-display text-sm font-bold text-text">
+              {p.pointOfSale?.agency.name ?? "Service Commercial"}
+            </h5>
+            <p className="font-mono text-sm font-semibold text-text mt-1">
+              {p.pointOfSale?.agency.phone ?? "+229 01 23 45 67 89"}
+            </p>
+            <p className="font-sans text-xs text-text-2 mt-0.5">
+              Lun-Ven: 9h-18h
+            </p>
+          </div>
+        </div>
+
+        {/* Adresse Agence */}
+        <div className="flex items-start gap-3 rounded-xl border border-border bg-surface-2/40 p-4 transition-colors hover:bg-surface-2/60">
+          <MapPin className="h-5 w-5 text-primary dark:text-primary/90 shrink-0 mt-0.5" />
+          <div>
+            <h5 className="font-display text-sm font-bold text-text">
+              Adresse de l'Agence
+            </h5>
+            <p className="font-sans text-sm font-semibold text-text mt-1">
+              {p.pointOfSale?.agency.address ?? "Non renseignée"}
+            </p>
+          </div>
         </div>
       </div>
     </div>

@@ -19,7 +19,7 @@ import {
   SimulationInput,
   SimulationParcelleParams,
   SimulationResult,
-  SimulationDebugDetails,
+  // SimulationDebugDetails,
   libelleFrequence,
 } from './simulation.types';
 
@@ -126,7 +126,7 @@ function calculerPrimeParcelle(
   garantieDeces: boolean,
 ): {
   premium: number;
-  debugDetails: SimulationDebugDetails;
+  // debugDetails: SimulationDebugDetails;
 } {
   const v = 1 / (1 + it);
   const L = TABLE_MORTALITE;
@@ -189,6 +189,7 @@ function calculerPrimeParcelle(
 
   return {
     premium,
+    /*
     debugDetails: {
       v,
       axn,
@@ -211,6 +212,7 @@ function calculerPrimeParcelle(
       fm,
       x,
     },
+    */
   };
 }
 
@@ -286,7 +288,7 @@ export function simulerPrimeParcelle(input: SimulationInput): SimulationResult {
   const fg = parcelle.fraisGestion;
   const fa = parcelle.fraisAcquisition;
 
-  const { premium: primeParEcheance, debugDetails } = calculerPrimeParcelle(
+  const { premium: primeParEcheance /*, debugDetails */ } = calculerPrimeParcelle(
     S0,
     k,
     t,
@@ -312,7 +314,7 @@ export function simulerPrimeParcelle(input: SimulationInput): SimulationResult {
     nombreEcheancesTotal,
     coutTotalEstime: arrondi(coutTotalEstime),
     parametresUtilises: { S0, k, t, x, freq, r, sigma, fm, it, fg, fa },
-    debugDetails,
+    // debugDetails,
   };
 }
 

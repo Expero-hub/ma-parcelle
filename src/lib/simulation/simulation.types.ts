@@ -106,6 +106,7 @@ export interface ParcelleTechnicalOverrides {
   fraisAcquisition?: number | null;
 }
 
+/*
 export interface SimulationDebugDetails {
   v: number;
   axn: number;
@@ -129,6 +130,7 @@ export interface SimulationDebugDetails {
   x:number;
   
 }
+*/
 
 export interface SimulationResult {
   /** Montant à payer par échéance (résultat de la cellule G5 / a_m). */
@@ -155,5 +157,5 @@ export interface SimulationResult {
     fg: number;
     fa: number;
   };
-  debugDetails?: SimulationDebugDetails;
+  // debugDetails?: SimulationDebugDetails;
 }

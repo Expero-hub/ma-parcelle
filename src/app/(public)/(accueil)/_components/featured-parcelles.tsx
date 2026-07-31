@@ -68,9 +68,13 @@ function FeaturedCard({ p, i }: { p: any; i: number }) {
 
         {/* Card Content */}
         <div className="flex flex-1 flex-col p-5">
-          <h3 className="font-display text-xl font-bold text-text">
-            {ref}
-          </h3>
+          <div className="mt-4 font-sans text-sm text-text-2">
+            <span className="font-bold text-primary text-lg">
+              {fmtFCFA(p.monthlyPayment7Years ?? 0)} F</span>{" "}
+              <span className="text-text-2 text-base font-semibold">/mois sur 7 ans</span> 
+            
+            
+          </div>
 
           <div className="mt-3 flex items-center gap-2 font-sans text-sm text-text-2">
             <Ruler className="size-4 shrink-0 text-text-2" />
@@ -83,10 +87,9 @@ function FeaturedCard({ p, i }: { p: any; i: number }) {
           </div>
 
           <div className="mt-4 font-sans text-sm text-text-2">
-            <span className="font-bold text-emerald-500">
-              {fmtFCFA(p.monthlyPayment7Years ?? 0)} F/mois
-            </span>{" "}
-            sur 7 ans · {Math.round(area)} m²
+            <span className="font-bold">
+             {ref}
+            </span>
           </div>
 
           {/* Detail CTA Button */}

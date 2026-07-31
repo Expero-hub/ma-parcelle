@@ -221,7 +221,7 @@ export function FinancementModal({ parcelle }: FinancementModalProps) {
                     htmlFor="priseEnChargeFraisMutation"
                     className="font-sans text-sm font-semibold text-text cursor-pointer select-none"
                   >
-                    Pris en charge des frais de mutation et TF
+                    Prise en charge des frais de mutation et TF
                   </label>
                 </div>
 
@@ -338,7 +338,7 @@ export function FinancementModal({ parcelle }: FinancementModalProps) {
                   </div>
                 </div>
 
-                {/* Debug details collapsible section */}
+                {/* Debug details collapsible section - commented out
                 {simulationResult.debugDetails && (
                   <details className="mt-4 border border-dashed border-border/80 rounded-xl p-3 bg-surface-2/20">
                     <summary className="cursor-pointer font-sans text-xs font-semibold text-text-2 focus:outline-none select-none">
@@ -420,6 +420,7 @@ export function FinancementModal({ parcelle }: FinancementModalProps) {
                     </div>
                   </details>
                 )}
+                */}
 
                 {/* Contacts Info Section */}
                 <div className="pt-2 border-t border-border space-y-4">

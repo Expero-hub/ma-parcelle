@@ -216,13 +216,13 @@ export default async function ParcelleDetailPage({
           <Gallery images={p.imagesList} />
           <CadastralPlan p={p} />
           <SpecGrid p={p} />
-          <DocumentsList p={p} />
+          
         </div>
 
         {/* right */}
         <div>
           <ReservationPanel p={p} />
-          <TrustNote />
+          {/* <TrustNote /> */}
         </div>
       </div>
     </div>
