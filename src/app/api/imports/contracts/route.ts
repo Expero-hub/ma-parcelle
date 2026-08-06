@@ -10,6 +10,7 @@ import {
   normalizeString,
   type RowResult,
 } from "@/lib/imports/import-helpers";
+import { saveImportedFile } from "@/lib/imports/save-import";
 
 const PERIODICITY_MAP: Record<string, Periodicity> = {
   M: Periodicity.MONTHLY,
@@ -24,10 +25,10 @@ const PERIODICITY_MAP: Record<string, Periodicity> = {
 
 export async function POST(req: Request) {
   // 1. Contrôle des autorisations
-  await requirePermission("create");
+  const user = await requirePermission("create");
 
   // 2. Extrait les données du fichier
-  const { headerMap, dataRows, errorResponse } = await parseFileFromRequest(req);
+  const { headerMap, dataRows, errorResponse, file } = await parseFileFromRequest(req);
   if (errorResponse) {
     return NextResponse.json(errorResponse, { status: 400 });
   }
@@ -68,6 +69,7 @@ export async function POST(req: Request) {
   const idxCompagnie = headerMap.get("COMPAGNIE") ?? headerMap.get("COMPAGNIE D'ASSURANCE");
 
   const results: RowResult[] = [];
+  const createdContractRefs: string[] = [];
 
   // 4. Traitement ligne par ligne
   for (let i = 0; i < dataRows.length; i++) {
@@ -268,6 +270,8 @@ export async function POST(req: Request) {
         },
       });
 
+      createdContractRefs.push(contratRef);
+
       results.push({
         line: rowLineNumber,
         status: "created",
@@ -286,6 +290,23 @@ export async function POST(req: Request) {
   }
 
   const summary = buildImportSummary(results);
+
+  if (file && summary.total > 0 && user) {
+    const importFile = await saveImportedFile({
+      file,
+      type: "contrat",
+      userId: user.id,
+      processedRows: summary.created + summary.skipped,
+      errorRows: summary.errors,
+    });
+
+    if (importFile && createdContractRefs.length > 0) {
+      await prisma.contract.updateMany({
+        where: { reference: { in: createdContractRefs } },
+        data: { fileId: importFile.id },
+      });
+    }
+  }
 
   return NextResponse.json({
     success: true,

@@ -8,13 +8,14 @@ import {
   parseDate,
   type RowResult,
 } from "@/lib/imports/import-helpers";
+import { saveImportedFile } from "@/lib/imports/save-import";
 
 export async function POST(req: Request) {
   // 1. Contrôle des autorisations
-  await requirePermission("create");
+  const user = await requirePermission("create");
 
   // 2. Extrait les données du fichier
-  const { headerMap, dataRows, errorResponse } = await parseFileFromRequest(req);
+  const { headerMap, dataRows, errorResponse, file } = await parseFileFromRequest(req);
   if (errorResponse) {
     return NextResponse.json(errorResponse, { status: 400 });
   }
@@ -41,6 +42,7 @@ export async function POST(req: Request) {
   const idxMontant = headerMap.get("MONTANT")!;
 
   const results: RowResult[] = [];
+  const createdInstallmentRefs: string[] = [];
 
   // 4. Traitement ligne par ligne
   for (let i = 0; i < dataRows.length; i++) {
@@ -154,6 +156,8 @@ export async function POST(req: Request) {
         },
       });
 
+      createdInstallmentRefs.push(emissionRef);
+
       results.push({
         line: rowLineNumber,
         status: "created",
@@ -172,6 +176,23 @@ export async function POST(req: Request) {
   }
 
   const summary = buildImportSummary(results);
+
+  if (file && summary.total > 0 && user) {
+    const importFile = await saveImportedFile({
+      file,
+      type: "emission",
+      userId: user.id,
+      processedRows: summary.created + summary.skipped,
+      errorRows: summary.errors,
+    });
+
+    if (importFile && createdInstallmentRefs.length > 0) {
+      await prisma.installment.updateMany({
+        where: { reference: { in: createdInstallmentRefs } },
+        data: { fileId: importFile.id },
+      });
+    }
+  }
 
   return NextResponse.json({
     success: true,

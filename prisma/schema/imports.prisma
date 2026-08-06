@@ -10,6 +10,11 @@ model ImportFile {
   uploadedBy           User                  @relation(fields: [uploadedById], references: [id])
   importedInstallments ImportedInstallment[]
   importedPayments     ImportedPayment[]
+  contracts            Contract[]
+  installments         Installment[]
+  payments             Payment[]
+  processedRows        Int                   @default(0) @map("processed_rows")
+  errorRows            Int                   @default(0) @map("error_rows")
 
   @@index([uploadedById])
   @@map("import_files")

@@ -111,6 +111,7 @@ export async function parseFileFromRequest(req: Request): Promise<{
   headerMap: Map<string, number>;
   dataRows: unknown[][];
   errorResponse?: ImportResponse;
+  file?: Blob;
 }> {
   const formData = await req.formData().catch(() => null);
   if (!formData) {
@@ -190,7 +191,7 @@ export async function parseFileFromRequest(req: Request): Promise<{
 
     const dataRows = rawRows.slice(1);
 
-    return { headerMap, dataRows };
+    return { headerMap, dataRows, file };
   } catch (err) {
     console.error("Erreur de lecture du fichier Excel/CSV:", err);
     return {

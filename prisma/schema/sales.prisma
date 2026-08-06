@@ -23,12 +23,15 @@ model Contract {
   agency            Agency         @relation(fields: [agencyId], references: [id])
   installments      Installment[]
   reservations      Reservation[]
+  fileId            String?        @map("file_id")
+  file              ImportFile?    @relation(fields: [fileId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([parcelleId])
   @@index([companyId])
   @@index([agencyId])
   @@index([status])
+  @@index([fileId])
   @@map("contracts")
 }
 
@@ -83,9 +86,12 @@ model Installment {
   deletedAt  DateTime?
   contract   Contract          @relation(fields: [contractId], references: [id])
   payments   Payment[]
+  fileId     String?           @map("file_id")
+  file       ImportFile?       @relation(fields: [fileId], references: [id], onDelete: SetNull)
 
   @@index([contractId])
   @@index([status])
+  @@index([fileId])
   @@map("installments")
 }
 
@@ -102,8 +108,11 @@ model Payment {
   updatedAt     DateTime    @updatedAt
   deletedAt     DateTime?
   installment   Installment @relation(fields: [installmentId], references: [id])
+  fileId        String?     @map("file_id")
+  file          ImportFile? @relation(fields: [fileId], references: [id], onDelete: SetNull)
 
   @@index([installmentId])
+  @@index([fileId])
   @@map("payments")
 }
 

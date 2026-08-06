@@ -9,13 +9,14 @@ import {
   parseDate,
   type RowResult,
 } from "@/lib/imports/import-helpers";
+import { saveImportedFile } from "@/lib/imports/save-import";
 
 export async function POST(req: Request) {
   // 1. Contrôle des autorisations
-  await requirePermission("create");
+  const user = await requirePermission("create");
 
   // 2. Extrait les données du fichier
-  const { headerMap, dataRows, errorResponse } = await parseFileFromRequest(req);
+  const { headerMap, dataRows, errorResponse, file } = await parseFileFromRequest(req);
   if (errorResponse) {
     return NextResponse.json(errorResponse, { status: 400 });
   }
@@ -42,6 +43,7 @@ export async function POST(req: Request) {
   const idxObservation = headerMap.get("OBSERVATION");
 
   const results: RowResult[] = [];
+  const createdPaymentRefs: string[] = [];
   const impactedInstallmentIds = new Set<string>();
 
   // 4. Traitement ligne par ligne
@@ -166,6 +168,7 @@ export async function POST(req: Request) {
         },
       });
 
+      createdPaymentRefs.push(paymentRef);
       impactedInstallmentIds.add(installment.id);
 
       results.push({
@@ -227,6 +230,23 @@ export async function POST(req: Request) {
   }
 
   const summary = buildImportSummary(results);
+
+  if (file && summary.total > 0 && user) {
+    const importFile = await saveImportedFile({
+      file,
+      type: "encaissement",
+      userId: user.id,
+      processedRows: summary.created + summary.skipped,
+      errorRows: summary.errors,
+    });
+
+    if (importFile && createdPaymentRefs.length > 0) {
+      await prisma.payment.updateMany({
+        where: { reference: { in: createdPaymentRefs } },
+        data: { fileId: importFile.id },
+      });
+    }
+  }
 
   return NextResponse.json({
     success: true,

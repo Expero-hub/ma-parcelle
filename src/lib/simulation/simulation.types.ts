@@ -72,6 +72,8 @@ export interface SimulationClientInput {
   priseEnChargeFraisMutation: boolean;
   /** Option Garantie en cas de décès */
   garantieDeces?: boolean;
+  /** Versement initial (verse_init) */
+  verse_init?: number;
 }
 
 export interface SimulationInput {
@@ -156,6 +158,7 @@ export interface SimulationResult {
     it: number;
     fg: number;
     fa: number;
+    verse_init?: number;
   };
   // debugDetails?: SimulationDebugDetails;
 }

@@ -21,6 +21,8 @@ export function FinancementModal({ parcelle }: FinancementModalProps) {
   const [duration, setDuration] = useState<number>(minDur);
   const [frequency, setFrequency] = useState<FrequencePaiement | "">("");
   const [age, setAge] = useState<number | "">(35);
+  const defaultVerseInit = Math.round(parcelle.price * 0.2);
+  const [versementInitial, setVersementInitial] = useState<number | "">(defaultVerseInit);
   const [priseEnChargeFraisMutation, setPriseEnChargeFraisMutation] = useState<boolean>(false);
   const [garantieDeces, setGarantieDeces] = useState<boolean>(false);
   const [simulationResult, setSimulationResult] = useState<SimulationResult | null>(null);
@@ -55,6 +57,7 @@ export function FinancementModal({ parcelle }: FinancementModalProps) {
     setDuration(minDur);
     setFrequency("");
     setAge(35);
+    setVersementInitial(defaultVerseInit);
     setPriseEnChargeFraisMutation(false);
     setGarantieDeces(false);
     setSimulationResult(null);
@@ -71,6 +74,10 @@ export function FinancementModal({ parcelle }: FinancementModalProps) {
     }
     if (age === "" || Number(age) < 18 || Number(age) > 100) {
       setErrorMsg("Veuillez saisir un âge valide pour l'assuré (entre 18 et 100 ans).");
+      return;
+    }
+    if (versementInitial !== "" && Number(versementInitial) < 0) {
+      setErrorMsg("Le versement initial doit être positif ou nul.");
       return;
     }
     if (Number(age) + duration >= 110) {
@@ -99,6 +106,7 @@ export function FinancementModal({ parcelle }: FinancementModalProps) {
           frequencePaiement: Number(frequency) as FrequencePaiement,
           priseEnChargeFraisMutation,
           garantieDeces,
+          verse_init: versementInitial !== "" ? Number(versementInitial) : 0,
         },
       });
 
@@ -204,6 +212,25 @@ export function FinancementModal({ parcelle }: FinancementModalProps) {
                   className="w-full rounded-lg border border-border bg-surface-2 px-3.5 py-2.5 font-sans text-base text-text focus:outline-none focus:ring-2 focus:ring-primary"
                   required
                   placeholder="Ex: 35"
+                />
+              </div>
+
+              {/* Versement Initial Input */}
+              <div>
+                <label className="block font-sans text-sm font-semibold text-text mb-1.5">
+                  Versement initial (FCFA) :
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  value={versementInitial}
+                  onChange={(e) => {
+                    const val = e.target.value === "" ? "" : Number(e.target.value);
+                    setVersementInitial(val);
+                  }}
+                  className="w-full rounded-lg border border-border bg-surface-2 px-3.5 py-2.5 font-sans text-base text-text focus:outline-none focus:ring-2 focus:ring-primary"
+                  required
+                  placeholder={`Ex: ${defaultVerseInit}`}
                 />
               </div>
 
@@ -314,6 +341,18 @@ export function FinancementModal({ parcelle }: FinancementModalProps) {
                   </div>
 
                   <div className="h-px bg-border" />
+
+                  {simulationResult.parametresUtilises.verse_init !== undefined && simulationResult.parametresUtilises.verse_init > 0 && (
+                    <>
+                      <div className="flex items-center justify-between font-sans text-xs font-semibold text-text-2">
+                        <span>Versement initial déduit</span>
+                        <span className="font-mono font-bold text-sm text-text">
+                          {fmtFCFA(simulationResult.parametresUtilises.verse_init)} FCFA
+                        </span>
+                      </div>
+                      <div className="h-px bg-border" />
+                    </>
+                  )}
 
                   <div className="text-center py-1">
                     <span className="block font-sans text-xs text-text-2 mb-1">

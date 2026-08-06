@@ -370,14 +370,14 @@ export function AddParcelleForm({
               <label className={labelCls} htmlFor="minDuration">
                 Durée min (ans)
               </label>
-              <Input id="minDuration" type="number" {...register("minDuration")} />
+              <Input id="minDuration" type="number" disabled {...register("minDuration")} />
               {errors.minDuration && <p className={errCls}>{errors.minDuration.message}</p>}
             </div>
             <div>
               <label className={labelCls} htmlFor="maxDuration">
                 Durée max (ans)
               </label>
-              <Input id="maxDuration" type="number" {...register("maxDuration")} />
+              <Input id="maxDuration" type="number" disabled {...register("maxDuration")} />
               {errors.maxDuration && <p className={errCls}>{errors.maxDuration.message}</p>}
             </div>
           </div>

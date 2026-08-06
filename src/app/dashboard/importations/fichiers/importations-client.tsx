@@ -1,360 +1,404 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
 import {
   Upload,
-  AlertTriangle,
-  CheckCircle2,
-  XCircle,
-  FileSpreadsheet,
   Download,
-  Eye,
-  FileText,
-  CalendarClock,
-  Wallet
+  Search,
+  ChevronDown,
+  MoreHorizontal,
 } from "lucide-react";
 
-type ImportReport = {
-  success: boolean;
-  summary: { total: number; created: number; skipped: number; errors: number };
-  rows: Array<{
-    line: number;
-    status: "created" | "skipped" | "error";
-    reference?: string;
-    message?: string;
-    warnings?: string[];
-  }>;
-  message?: string;
+import { Input } from "@/components/ui/input";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { TablePagination } from "@/components/ui/paginated-table-wrapper";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { ImportFileModal } from "../_components/import-file-modal";
+
+type ImportFileRow = {
+  id: string;
+  name: string;
+  type: string;
+  path: string;
+  processedRows: number;
+  errorRows: number;
+  createdAt: string;
+  uploadedBy?: {
+    name: string | null;
+    email: string;
+  };
 };
 
 export function ImportationsClient() {
-  const router = useRouter();
-  const [fileType, setFileType] = useState<"Contrat" | "Émission" | "Encaissement">("Contrat");
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [report, setReport] = useState<ImportReport | null>(null);
-  const [globalError, setGlobalError] = useState<string | null>(null);
+  const [files, setFiles] = useState<ImportFileRow[]>([]);
+  const [totalResults, setTotalResults] = useState(0);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [q, setQ] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  
+  const [filterType, setFilterType] = useState("");
+  const [filterParcelle, setFilterParcelle] = useState("");
+  const [debouncedParcelle, setDebouncedParcelle] = useState("");
+  const [filterClient, setFilterClient] = useState("");
+  const [debouncedClient, setDebouncedClient] = useState("");
+  const [filterAgency, setFilterAgency] = useState("");
+  const [agencies, setAgencies] = useState<Array<{ id: string; name: string }>>([]);
 
-  const resetState = () => {
-    setSelectedFile(null);
-    setReport(null);
-    setGlobalError(null);
-  };
+  const [modalOpen, setModalOpen] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
-  const getTemplateLink = () => {
-    if (fileType === "Contrat") return "/templates/modele-contrats.xlsx";
-    if (fileType === "Émission") return "/templates/modele-emissions.xlsx";
-    return "/templates/modele-encaissements.xlsx";
-  };
+  // Debounces
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedQuery(q);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [q]);
 
-  const getListLink = () => {
-    if (fileType === "Contrat") return "/dashboard/importations/liste-des-contrats";
-    if (fileType === "Émission") return "/dashboard/importations/liste-des-emissions";
-    return "/dashboard/importations/liste-des-encaissements";
-  };
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedParcelle(filterParcelle);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [filterParcelle]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedFile) {
-      setGlobalError("Veuillez sélectionner un fichier Excel ou CSV.");
-      return;
-    }
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedClient(filterClient);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [filterClient]);
 
-    setLoading(true);
-    setGlobalError(null);
-    setReport(null);
+  // Reset to page 1 on filter changes
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedQuery, filterType, debouncedParcelle, debouncedClient, filterAgency, pageSize]);
 
-    const formData = new FormData();
-    formData.append("file", selectedFile);
-
-    let endpoint = "/api/imports/contracts";
-    if (fileType === "Émission") endpoint = "/api/imports/installments";
-    else if (fileType === "Encaissement") endpoint = "/api/imports/payments";
-
+  // Load files function
+  const loadFiles = async () => {
     try {
-      const res = await fetch(endpoint, {
-        method: "POST",
-        body: formData,
-      });
+      const typeParam = filterType ? `&type=${filterType}` : "";
+      const searchParam = debouncedQuery ? `&q=${encodeURIComponent(debouncedQuery)}` : "";
+      const parcelleParam = debouncedParcelle ? `&parcelle=${encodeURIComponent(debouncedParcelle)}` : "";
+      const clientParam = debouncedClient ? `&client=${encodeURIComponent(debouncedClient)}` : "";
+      const agencyParam = filterAgency ? `&agency=${filterAgency}` : "";
 
-      const data = await res.json();
-
-      if (!res.ok && !data.rows) {
-        setGlobalError(data.message || "Une erreur est survenue lors de l'importation.");
-      } else {
-        setReport(data);
+      const url = `/api/imports/files?page=${page}&limit=${pageSize}${typeParam}${searchParam}${parcelleParam}${clientParam}${agencyParam}`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        setFiles(data.data || []);
+        setTotalResults(data.meta.total || 0);
       }
     } catch (err) {
-      console.error("Erreur d'importation :", err);
-      setGlobalError("Erreur réseau ou problème de serveur lors de l'envoi du fichier.");
+      console.error("Erreur lors du chargement des fichiers:", err);
+    }
+  };
+
+  // Fetch initial files and agencies list
+  useEffect(() => {
+    loadFiles();
+  }, [page, pageSize, debouncedQuery, filterType, debouncedParcelle, debouncedClient, filterAgency]);
+
+  useEffect(() => {
+    const fetchAgencies = async () => {
+      try {
+        const res = await fetch("/api/agencies?limit=100");
+        if (res.ok) {
+          const data = await res.json();
+          setAgencies(data.data || []);
+        }
+      } catch (err) {
+        console.error("Erreur lors du chargement des agences:", err);
+      }
+    };
+    fetchAgencies();
+  }, []);
+
+  const totalPages = Math.max(1, Math.ceil(totalResults / pageSize));
+
+  // Date formatter matching screenshot: "08 juil. 2025 à 18:42"
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const day = date.toLocaleDateString("fr-FR", { day: "2-digit" });
+    const month = date.toLocaleDateString("fr-FR", { month: "short" }).replace(".", "");
+    const year = date.toLocaleDateString("fr-FR", { year: "numeric" });
+    const time = date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+    return `${day} ${month}. ${year} à ${time}`;
+  };
+
+  const typeLabels: Record<string, string> = {
+    contrat: "Contrat",
+    emission: "Emission",
+    encaissement: "Encaissement",
+  };
+
+  const typeBadgeStyles: Record<string, string> = {
+    contrat: "bg-primary/10 text-primary border border-primary/20",
+    emission: "bg-secondary/10 text-secondary border border-secondary/20",
+    encaissement: "bg-gold/10 text-gold border border-gold/20",
+  };
+
+  const handleDelete = async () => {
+    if (!confirmDeleteId) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/imports/files/${confirmDeleteId}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        loadFiles();
+      } else {
+        alert("Une erreur est survenue lors de la suppression.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Erreur réseau ou problème de serveur.");
     } finally {
-      setLoading(false);
+      setDeleting(false);
+      setConfirmDeleteId(null);
     }
   };
 
   return (
-    <div className="flex flex-1 flex-col gap-6 p-6 md:p-8 text-text max-w-5xl mx-auto">
-      {/* Header */}
-      <div>
-        <p className="font-mono text-xs font-medium tracking-[0.14em] text-primary uppercase">Imports</p>
-        <h1 className="mt-2 font-display text-3xl font-bold tracking-tight">
-          Centralisation des Fichiers
-        </h1>
-        <p className="mt-2 font-sans text-sm text-text-2">
-          Importez l'historique de vos contrats, émissions et encaissements depuis vos fichiers Excel.
-        </p>
-      </div>
-
-      {/* Grid structure: Left form, Right templates info */}
-      <div className="grid gap-6 md:grid-cols-3">
-        {/* Left Form Panel */}
-        <div className="md:col-span-2 rounded-2xl border border-border bg-surface p-6 shadow-sm">
-          <h2 className="font-display text-lg font-semibold mb-4 flex items-center gap-2">
-            <Upload className="size-5 text-primary" />
-            Importer un fichier de données
-          </h2>
-
-          {globalError && (
-            <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 p-3.5 text-xs text-red-600 font-medium">
-              {globalError}
-            </div>
-          )}
-
-          {report ? (
-            <div className="space-y-4">
-              <div className="grid grid-cols-4 gap-3 text-center">
-                <div className="rounded-xl border border-border bg-surface-2 p-3">
-                  <span className="block text-xs text-text-2 font-medium">Total</span>
-                  <span className="font-mono text-lg font-bold text-text">
-                    {report.summary.total}
-                  </span>
-                </div>
-                <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3">
-                  <span className="block text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-                    Créés
-                  </span>
-                  <span className="font-mono text-lg font-bold text-emerald-600 dark:text-emerald-400">
-                    {report.summary.created}
-                  </span>
-                </div>
-                <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
-                  <span className="block text-xs text-amber-600 dark:text-amber-400 font-medium">
-                    Ignorés
-                  </span>
-                  <span className="font-mono text-lg font-bold text-amber-600 dark:text-amber-400">
-                    {report.summary.skipped}
-                  </span>
-                </div>
-                <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3">
-                  <span className="block text-xs text-red-600 dark:text-red-400 font-medium">
-                    Erreurs
-                  </span>
-                  <span className="font-mono text-lg font-bold text-red-600 dark:text-red-400">
-                    {report.summary.errors}
-                  </span>
-                </div>
-              </div>
-
-              {report.rows && report.rows.length > 0 && (
-                <div className="max-h-72 overflow-y-auto rounded-xl border border-border bg-surface-2 p-3 space-y-2 text-xs">
-                  <h4 className="font-semibold text-text mb-2">Détails de l'import :</h4>
-                  {report.rows.map((r, idx) => (
-                    <div
-                      key={idx}
-                      className="flex flex-col gap-1 p-2 rounded-lg bg-surface border border-border/60"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold text-text">
-                          Ligne {r.line} {r.reference ? `(${r.reference})` : ""}
-                        </span>
-                        {r.status === "created" && (
-                          <span className="inline-flex items-center gap-1 text-emerald-600 font-bold">
-                            <CheckCircle2 className="size-3.5" /> Succès
-                          </span>
-                        )}
-                        {r.status === "skipped" && (
-                          <span className="inline-flex items-center gap-1 text-amber-600 font-bold">
-                            <AlertTriangle className="size-3.5" /> Ignoré
-                          </span>
-                        )}
-                        {r.status === "error" && (
-                          <span className="inline-flex items-center gap-1 text-red-600 font-bold">
-                            <XCircle className="size-3.5" /> Erreur
-                          </span>
-                        )}
-                      </div>
-
-                      {r.message && <p className="text-text-2">{r.message}</p>}
-
-                      {r.warnings && r.warnings.length > 0 && (
-                        <div className="mt-1 text-amber-600 bg-amber-500/10 p-1.5 rounded font-medium">
-                          {r.warnings.join(" | ")}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div className="flex flex-wrap items-center justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={resetState}
-                  className="rounded-xl border border-border bg-surface-2 px-5 py-2.5 font-sans text-sm font-semibold text-text hover:bg-border transition-colors cursor-pointer"
-                >
-                  Importer un autre fichier
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    router.push(getListLink());
-                    router.refresh();
-                  }}
-                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-5 py-2.5 font-sans text-sm font-semibold text-white hover:bg-emerald-800 transition-colors shadow-md cursor-pointer"
-                >
-                  <Eye className="size-4" />
-                  Voir la liste
-                </button>
-              </div>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-              <div className="flex flex-col gap-1.5">
-                <label className="font-sans text-xs font-semibold text-text">
-                  Type de données à importer
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { type: "Contrat", label: "Contrats", icon: <FileText className="size-4" /> },
-                    { type: "Émission", label: "Émissions", icon: <CalendarClock className="size-4" /> },
-                    { type: "Encaissement", label: "Encaissements", icon: <Wallet className="size-4" /> }
-                  ].map((opt) => (
-                    <button
-                      key={opt.type}
-                      type="button"
-                      onClick={() => {
-                        setFileType(opt.type as any);
-                        setSelectedFile(null);
-                      }}
-                      className={`flex flex-col items-center justify-center gap-2 p-3.5 rounded-xl border font-sans text-xs font-bold transition-all cursor-pointer ${
-                        fileType === opt.type
-                          ? "bg-primary/10 border-primary text-primary shadow-xs"
-                          : "border-border bg-surface-2 hover:bg-surface-2/80 text-text-2 hover:text-text"
-                      }`}
-                    >
-                      {opt.icon}
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="font-sans text-xs font-semibold text-text">
-                  Fichier de données (.xlsx, .xls, .csv)
-                </label>
-                <div className="relative flex flex-col items-center justify-center border-2 border-dashed border-border hover:border-primary bg-surface-2 rounded-2xl p-8 text-center transition-colors cursor-pointer group">
-                  <input
-                    type="file"
-                    accept=".xlsx,.xls,.csv"
-                    required
-                    onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  />
-                  <div className="flex size-12 items-center justify-center rounded-2xl bg-surface border border-border group-hover:border-primary text-text-2 group-hover:text-primary transition-all mb-3">
-                    <FileSpreadsheet className="size-6" />
-                  </div>
-                  {selectedFile ? (
-                    <div>
-                      <span className="block text-sm font-semibold text-text truncate max-w-[280px]">
-                        {selectedFile.name}
-                      </span>
-                      <span className="block text-xs text-text-2 mt-1">
-                        {(selectedFile.size / 1024).toFixed(1)} KB
-                      </span>
-                    </div>
-                  ) : (
-                    <div>
-                      <span className="block text-sm font-semibold text-text">
-                        Cliquez ou glissez-déposez votre fichier
-                      </span>
-                      <span className="block text-xs text-text-2 mt-1">
-                        Format .xlsx, .xls ou .csv uniquement
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="mt-4 flex items-center justify-end gap-3">
-                <a
-                  href={getTemplateLink()}
-                  download={`modele-${fileType.toLowerCase()}s.xlsx`}
-                  className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-5 py-2.5 font-sans text-sm font-semibold text-text hover:bg-surface-2 transition-colors cursor-pointer"
-                >
-                  <Download className="size-4" />
-                  Template {fileType}
-                </a>
-
-                <button
-                  type="submit"
-                  disabled={loading || !selectedFile}
-                  className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 font-sans text-sm font-semibold text-on-primary hover:bg-primary/90 transition-colors shadow-md cursor-pointer disabled:opacity-50"
-                >
-                  <Upload className="size-4" />
-                  {loading ? "Importation..." : "Lancer l'importation"}
-                </button>
-              </div>
-            </form>
-          )}
+    <div className="flex flex-1 flex-col gap-6 p-6 md:p-8 text-text max-w-7xl mx-auto w-full">
+      {/* Header and Top Action Buttons */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="font-mono text-xs font-medium tracking-[0.14em] text-primary uppercase">Imports</p>
+          <h1 className="mt-2 font-display text-3xl font-bold tracking-tight">
+            Liste des fichiers de contrat, émissions et d'encaissements
+          </h1>
         </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={() => setModalOpen(true)}
+            className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 font-sans text-sm font-semibold text-on-primary hover:bg-primary/90 transition-colors shadow-md cursor-pointer"
+          >
+            <Upload className="size-4" />
+            Importer un fichier
+          </button>
 
-        {/* Right Templates Box */}
-        <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm flex flex-col justify-between">
-          <div>
-            <h3 className="font-display text-base font-bold mb-3 flex items-center gap-2 text-text">
-              <Download className="size-4.5 text-primary" />
-              Modèles de fichiers
-            </h3>
-            <p className="font-sans text-xs text-text-2 leading-relaxed mb-4">
-              Pour garantir le bon traitement de vos données, veuillez utiliser les en-têtes exacts spécifiés dans nos fichiers modèles.
-            </p>
-
-            <div className="space-y-3">
-              {[
-                { type: "Contrat", label: "Modèle Contrats", desc: "Format des contrats clients", link: "/templates/modele-contrats.xlsx" },
-                { type: "Émission", label: "Modèle Émissions", desc: "Échéances d'appels de fonds", link: "/templates/modele-emissions.xlsx" },
-                { type: "Encaissement", label: "Modèle Encaissements", desc: "Suivi des encaissements effectifs", link: "/templates/modele-encaissements.xlsx" }
-              ].map((tmpl) => (
-                <a
-                  key={tmpl.type}
-                  href={tmpl.link}
-                  download
-                  className="flex items-center gap-3 p-3 rounded-xl border border-border bg-surface-2 hover:bg-border/60 transition-colors cursor-pointer text-left"
-                >
-                  <div className="flex size-8 items-center justify-center rounded-lg bg-surface text-primary border border-border">
-                    <FileSpreadsheet className="size-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <span className="block text-xs font-bold text-text truncate">{tmpl.label}</span>
-                    <span className="block text-[10px] text-text-2 truncate">{tmpl.desc}</span>
-                  </div>
-                </a>
-              ))}
-            </div>
-          </div>
-
-          <div className="mt-6 rounded-xl border border-primary/20 bg-primary/5 p-3.5 text-xs text-text-2">
-            <span className="font-semibold text-text block mb-1">Règles d'Import :</span>
-            <ul className="list-disc pl-4 space-y-1">
-              <li>Pas de transactions globales bloquantes (ligne par ligne).</li>
-              <li>Les warnings ne bloquent pas la création de la ligne.</li>
-              <li>Vérifiez la cohérence des références.</li>
-            </ul>
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-5 py-2.5 font-sans text-sm font-semibold text-text hover:bg-surface-2 transition-colors cursor-pointer">
+              <Download className="size-4" />
+              Télécharger Template
+              <ChevronDown className="size-4 text-text-2" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={() => window.open("/templates/modele-contrats.xlsx", "_blank")}
+                className="cursor-pointer"
+              >
+                Modèle Contrats
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => window.open("/templates/modele-emissions.xlsx", "_blank")}
+                className="cursor-pointer"
+              >
+                Modèle Émissions
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => window.open("/templates/modele-encaissements.xlsx", "_blank")}
+                className="cursor-pointer"
+              >
+                Modèle Encaissements
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
+
+      {/* Filters Form Panel */}
+      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-5 bg-surface p-4 rounded-2xl border border-border shadow-sm">
+        {/* Name Search */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-semibold text-text">Recherche par référence</label>
+          <div className="relative">
+            <Input
+              placeholder="Nom du fichier..."
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              className="pl-8 text-sm h-10"
+            />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-text-2" />
+          </div>
+        </div>
+
+        {/* Type Filter */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-semibold text-text">Type de fichier</label>
+          <select
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value)}
+            className="h-10 rounded-xl border border-border bg-surface px-3 text-sm text-text outline-none focus:ring-2 focus:ring-primary cursor-pointer appearance-none"
+            style={{ backgroundImage: 'url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 20 20\'%3E%3Cpath stroke=\'%235A554C\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'m6 8 4 4 4-4\'/%3E%3C/svg%3E")', backgroundPosition: 'right 0.5rem center', backgroundSize: '1.25rem', backgroundRepeat: 'no-repeat', paddingRight: '2rem' }}
+          >
+            <option value="">Tous les types</option>
+            <option value="contrat">Contrat</option>
+            <option value="emission">Emission</option>
+            <option value="encaissement">Encaissement</option>
+          </select>
+        </div>
+
+        {/* Parcelle Filter */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-semibold text-text">Parcelle</label>
+          <Input
+            placeholder="Référence parcelle..."
+            value={filterParcelle}
+            onChange={(e) => setFilterParcelle(e.target.value)}
+            className="text-sm h-10"
+          />
+        </div>
+
+        {/* Client Filter */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-semibold text-text">Client</label>
+          <Input
+            placeholder="Nom ou email..."
+            value={filterClient}
+            onChange={(e) => setFilterClient(e.target.value)}
+            className="text-sm h-10"
+          />
+        </div>
+
+        {/* Agency Filter */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-semibold text-text">Agence</label>
+          <select
+            value={filterAgency}
+            onChange={(e) => setFilterAgency(e.target.value)}
+            className="h-10 rounded-xl border border-border bg-surface px-3 text-sm text-text outline-none focus:ring-2 focus:ring-primary cursor-pointer appearance-none"
+            style={{ backgroundImage: 'url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 20 20\'%3E%3Cpath stroke=\'%235A554C\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'m6 8 4 4 4-4\'/%3E%3C/svg%3E")', backgroundPosition: 'right 0.5rem center', backgroundSize: '1.25rem', backgroundRepeat: 'no-repeat', paddingRight: '2rem' }}
+          >
+            <option value="">Toutes les agences</option>
+            {agencies.map((agency) => (
+              <option key={agency.id} value={agency.id}>
+                {agency.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Main Files Table Card */}
+      <div className="overflow-x-auto rounded-2xl border border-border bg-surface shadow-sm">
+        <table className="w-full text-left text-sm border-collapse">
+          <thead className="bg-surface-2 text-text-2 border-b border-border">
+            <tr>
+              <th className="px-4 py-3.5 font-semibold">Nom du fichier</th>
+              <th className="px-4 py-3.5 font-semibold">Type</th>
+              <th className="px-4 py-3.5 font-semibold">Etat</th>
+              <th className="px-4 py-3.5 font-semibold">Lignes traitée(s)</th>
+              <th className="px-4 py-3.5 font-semibold">Lignes erronée(s)</th>
+              <th className="px-4 py-3.5 font-semibold">Date d'import</th>
+              <th className="px-4 py-3.5 text-right font-semibold">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border text-text">
+            {files.map((file) => (
+              <tr key={file.id} className="transition-colors hover:bg-surface-2/45">
+                <td className="px-4 py-3.5 font-medium truncate max-w-[220px]" title={file.name}>
+                  {file.name}
+                </td>
+                <td className="px-4 py-3.5">
+                  <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold border ${typeBadgeStyles[file.type] || "bg-surface-2 text-text-2 border-border"}`}>
+                    {typeLabels[file.type] || file.type}
+                  </span>
+                </td>
+                <td className="px-4 py-3.5">
+                  <span className="inline-flex rounded-full bg-emerald-500/15 text-emerald-600 border border-emerald-500/20 px-2.5 py-0.5 text-xs font-semibold">
+                    Fichier ventilé
+                  </span>
+                </td>
+                <td className="px-4 py-3.5 font-mono font-medium">
+                  {file.processedRows}
+                </td>
+                <td className="px-4 py-3.5 font-mono font-medium text-alert">
+                  {file.errorRows}
+                </td>
+                <td className="px-4 py-3.5 text-text-2">
+                  {formatDate(file.createdAt)}
+                </td>
+                <td className="px-4 py-3.5 text-right">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      aria-label="Actions"
+                      className="inline-flex rounded-lg p-1.5 text-text-2 hover:bg-surface-2 cursor-pointer transition-colors"
+                    >
+                      <MoreHorizontal className="size-4" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={() => window.location.href = `/api/imports/files/${file.id}/download`}
+                        className="cursor-pointer"
+                      >
+                        Télécharger le fichier
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => setConfirmDeleteId(file.id)}
+                        className="text-alert cursor-pointer font-medium"
+                      >
+                        Supprimer
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </td>
+              </tr>
+            ))}
+            {files.length === 0 && (
+              <tr>
+                <td colSpan={7} className="px-4 py-12 text-center text-text-2 font-medium">
+                  Aucun fichier importé trouvé.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pagination Footer */}
+      <TablePagination
+        currentPage={page}
+        totalPages={totalPages}
+        totalResults={totalResults}
+        onPageChange={setPage}
+        pageSize={pageSize}
+        onPageSizeChange={setPageSize}
+      />
+
+      {/* Import File Dialog Modal */}
+      <ImportFileModal
+        open={modalOpen}
+        onOpenChange={(open) => {
+          setModalOpen(open);
+          if (!open) {
+            loadFiles();
+          }
+        }}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={!!confirmDeleteId}
+        title="Supprimer le fichier ?"
+        description="Le fichier d'origine sera définitivement supprimé du stockage cloud et son historique d'importation sera effacé. Les entités insérées lors de son import ne seront pas altérées."
+        confirmLabel="Supprimer"
+        destructive
+        loading={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
     </div>
   );
 }

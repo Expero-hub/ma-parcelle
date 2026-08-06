@@ -18,12 +18,9 @@ import {
   SimulationClientInput,
   SimulationInput,
   SimulationParcelleParams,
-  SimulationResult,
-  // SimulationDebugDetails,
-  libelleFrequence,
+  SimulationResult
 } from './simulation.types';
 
-import { cumulativeStdNormalProbability } from 'simple-statistics';
 
 
 
@@ -124,6 +121,7 @@ function calculerPrimeParcelle(
   fa: number,
   freq: number,
   garantieDeces: boolean,
+  verse_init: number = 0,
 ): {
   premium: number;
   // debugDetails: SimulationDebugDetails;
@@ -181,8 +179,12 @@ function calculerPrimeParcelle(
   }
 
   const PUI = (P_epargne + P_call + PUP_deces + P_mutation) / (1 - fg);
+  const PUC = PUI / (1-fa);
+  if (verse_init > PUC) {
+    throw new Error(`Le versement initial ne peut pas dépasser le montant total brut de la simulation (${Math.round(PUC)} FCFA).`);
+  }
   const PAI = PUI / axn;
-  const PAC = PAI / (1 - fa);
+  const PAC = (PUC - verse_init )/axn
   const a_m = (1 - v) / (1 - Math.pow(v, 1 / freq));
 
   const premium = PAC / a_m;
@@ -236,6 +238,9 @@ function validerInput(parcelle: SimulationParcelleParams, client: SimulationClie
   const frequencesValides: FrequencePaiement[] = [1, 2, 4, 12];
   if (!frequencesValides.includes(client.frequencePaiement)) {
     throw new Error('Fréquence de paiement invalide (valeurs autorisées : 1, 2, 4, 12).');
+  }
+  if (client.verse_init !== undefined && (client.verse_init < 0 || isNaN(client.verse_init))) {
+    throw new Error('Le versement initial doit être positif ou nul.');
   }
   if (parcelle.volatilite <= 0) {
     throw new Error('La volatilité doit être strictement positive.');
@@ -301,10 +306,12 @@ export function simulerPrimeParcelle(input: SimulationInput): SimulationResult {
     fa,
     freq,
     client.garantieDeces ?? false,
+    client.verse_init ?? 0,
   );
 
   const nombreEcheancesTotal = t * freq;
-  const coutTotalEstime = primeParEcheance * nombreEcheancesTotal;
+  const verseInitApplique = client.verse_init ?? 0;
+  const coutTotalEstime = verseInitApplique + primeParEcheance * nombreEcheancesTotal;
 
   return {
     primeParEcheance: arrondi(primeParEcheance),
@@ -313,7 +320,7 @@ export function simulerPrimeParcelle(input: SimulationInput): SimulationResult {
     dureeAnnees: t,
     nombreEcheancesTotal,
     coutTotalEstime: arrondi(coutTotalEstime),
-    parametresUtilises: { S0, k, t, x, freq, r, sigma, fm, it, fg, fa },
+    parametresUtilises: { S0, k, t, x, freq, r, sigma, fm, it, fg, fa, verse_init: client.verse_init },
     // debugDetails,
   };
 }
