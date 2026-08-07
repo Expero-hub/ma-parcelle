@@ -84,10 +84,34 @@ export function CadastreMap({
   onSelect: (ref: string) => void;
   onHover: (ref: string | null) => void;
 }) {
-  const points = useMemo(
-    () => parcelles.map((p) => ({ p, pos: parseCoord(p) })),
-    [parcelles],
-  );
+  const points = useMemo(() => {
+    const parsed = parcelles.map((p) => ({ p, pos: parseCoord(p) }));
+    const groups: Record<string, typeof parsed> = {};
+    parsed.forEach((item) => {
+      const key = `${item.pos[0].toFixed(5)},${item.pos[1].toFixed(5)}`;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(item);
+    });
+    
+    const result: typeof parsed = [];
+    Object.values(groups).forEach((group) => {
+      if (group.length === 1) {
+        result.push(group[0]);
+      } else {
+        group.forEach((item, index) => {
+          const angle = (index * 2 * Math.PI) / group.length;
+          const radius = 0.0006;
+          const offsetLat = Math.cos(angle) * radius;
+          const offsetLng = Math.sin(angle) * radius;
+          result.push({
+            p: item.p,
+            pos: [item.pos[0] + offsetLat, item.pos[1] + offsetLng],
+          });
+        });
+      }
+    });
+    return result;
+  }, [parcelles]);
 
   return (
     <MapContainer

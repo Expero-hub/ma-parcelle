@@ -16,6 +16,7 @@ import { Eye, EyeOff } from "lucide-react";
 function ConnexionForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const registered = searchParams.get("registered") === "true";
   const [formError, setFormError] = useState<string | null>(null);
   // Reste vrai pendant la redirection (le composant n'est démonté qu'à l'arrivée
   // sur la nouvelle page) → empêche un second clic et garde le bouton en chargement.
@@ -87,11 +88,24 @@ function ConnexionForm() {
           {errors.password && <p className="mt-1 text-xs text-alert">{errors.password.message}</p>}
         </div>
 
+        {registered && (
+          <p className="text-sm font-semibold text-secondary bg-secondary/10 border border-secondary/20 p-2.5 rounded-xl text-center">
+            Votre compte a été créé avec succès. Connectez-vous.
+          </p>
+        )}
+
         {formError && <p className="text-sm text-alert">{formError}</p>}
 
         <Button type="submit" disabled={loading} className="mt-2 w-full">
           {loading ? "Connexion…" : "Se connecter"}
         </Button>
+
+        <p className="mt-4 text-center text-xs text-text-2">
+          Pas de compte ?{" "}
+          <Link href="/inscription" className="font-semibold text-primary hover:underline">
+            S'inscrire
+          </Link>
+        </p>
       </form>
     </div>
   );

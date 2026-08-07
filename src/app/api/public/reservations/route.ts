@@ -17,10 +17,11 @@ export async function POST(req: Request) {
     if (!session) {
       return NextResponse.json(
         {
+          success: false,
           error: "UNAUTHORIZED",
-          message: "Vous devez être connecté pour réserver une parcelle.",
+          message: "Vous devez être connecté pour manifester une intention d'achat.",
         },
-        { status: 401 },
+        { status: 401 }
       );
     }
 
@@ -30,16 +31,17 @@ export async function POST(req: Request) {
     if (!parsed.success) {
       return NextResponse.json(
         {
+          success: false,
           error: "INVALID_BODY",
-          message: "Données de réservation invalides.",
+          message: "Données de demande invalides.",
         },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
     const { reference } = parsed.data;
 
-    // 1. Trouve la parcelle par sa référence
+    // 1. Trouver la parcelle
     const parcelle = await prisma.parcelle.findFirst({
       where: { reference, deletedAt: null },
     });
@@ -47,75 +49,106 @@ export async function POST(req: Request) {
     if (!parcelle) {
       return NextResponse.json(
         {
+          success: false,
           error: "NOT_FOUND",
           message: "Parcelle introuvable.",
         },
-        { status: 404 },
+        { status: 404 }
       );
     }
 
     if (parcelle.status !== "AVAILABLE") {
       return NextResponse.json(
         {
+          success: false,
           error: "NOT_AVAILABLE",
-          message: "Cette parcelle n'est plus disponible à la réservation.",
+          message: "Cette parcelle n'est plus disponible à l'achat.",
         },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
-    // 2. Vérification obligatoire du contrat en cours pour le client
-    const activeContract = await prisma.contract.findFirst({
+    // 2. Vérifier si le client a un contrat (DRAFT ou ACTIVE) lié à cette parcelle
+    const userContract = await prisma.contract.findFirst({
       where: {
         userId: session.user.id,
-        status: "ACTIVE",
+        parcelleId: parcelle.id,
+        status: { in: ["DRAFT", "ACTIVE"] },
         deletedAt: null,
       },
     });
 
-    if (!activeContract) {
+    // S'il n'y a pas de contrat, rediriger vers le wizard de souscription
+    if (!userContract) {
+      return NextResponse.json({
+        success: false,
+        code: "NO_CONTRACT",
+        message: "Vous devez remplir un dossier de souscription pour cette parcelle.",
+      });
+    }
+
+    // 3. Vérifier s'il y a déjà une intention d'achat en cours
+    const existingReservation = await prisma.reservation.findFirst({
+      where: {
+        userId: session.user.id,
+        parcelleId: parcelle.id,
+        status: { in: ["PENDING", "CONFIRMED"] },
+        deletedAt: null,
+      },
+    });
+
+    if (existingReservation) {
+      return NextResponse.json({
+        success: true,
+        data: existingReservation,
+        message: "Votre intention d'achat a déjà été enregistrée pour cette parcelle.",
+      });
+    }
+
+    // 4. Vérifier la limite des 5 intentions d'achat actives (PENDING)
+    const pendingCount = await prisma.reservation.count({
+      where: {
+        userId: session.user.id,
+        status: "PENDING",
+        deletedAt: null,
+      },
+    });
+
+    if (pendingCount >= 5) {
       return NextResponse.json(
         {
-          error: "NO_ACTIVE_CONTRACT",
-          message:
-            "La réservation de parcelle est strictement réservée aux clients ayant un contrat en cours (actif). Veuillez contacter notre agence.",
+          success: false,
+          code: "LIMIT_REACHED",
+          message: "Vous ne pouvez pas soumettre plus de 5 intentions d'achat actives simultanément.",
         },
-        { status: 403 },
+        { status: 400 }
       );
     }
 
-    // 3. Créer la réservation et passer le statut de la parcelle à RESERVED
-    const reservation = await prisma.$transaction(async (tx) => {
-      const res = await tx.reservation.create({
-        data: {
-          parcelleId: parcelle.id,
-          userId: session.user.id,
-          contractId: activeContract.id,
-          status: "PENDING",
-        },
-      });
-
-      await tx.parcelle.update({
-        where: { id: parcelle.id },
-        data: { status: "RESERVED" },
-      });
-
-      return res;
+    // 5. Créer la réservation (sans modifier le statut de la parcelle, qui reste AVAILABLE pour d'autres clients)
+    const reservation = await prisma.reservation.create({
+      data: {
+        parcelleId: parcelle.id,
+        userId: session.user.id,
+        contractId: userContract.id,
+        status: "PENDING",
+      },
     });
 
     return NextResponse.json({
       success: true,
       data: reservation,
-      message: `Réservation enregistrée avec succès sous votre contrat N° ${activeContract.reference}.`,
+      message: `Votre intention d'achat a été enregistrée avec succès sous le contrat de référence ${userContract.reference}.`,
     });
   } catch (err: any) {
-    console.error("Erreur API Réservation:", err);
+    console.error("Erreur API Réservation/Intention:", err);
     return NextResponse.json(
       {
+        success: false,
         error: "SERVER_ERROR",
-        message: "Une erreur interne s'est produite lors de la réservation.",
+        message: "Une erreur interne s'est produite lors de l'enregistrement.",
       },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

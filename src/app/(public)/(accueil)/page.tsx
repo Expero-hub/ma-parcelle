@@ -25,6 +25,10 @@ export default async function Home() {
           pointOfSale: {
             include: { agency: true },
           },
+          reservations: {
+            where: { status: "PENDING", deletedAt: null },
+            select: { id: true },
+          },
         },
       }),
       prisma.zone.findMany({
@@ -88,6 +92,7 @@ export default async function Home() {
         images: p.images.map((img) => ({
           path: img.path,
         })),
+        interestCount: p.reservations.length,
       };
     });
 

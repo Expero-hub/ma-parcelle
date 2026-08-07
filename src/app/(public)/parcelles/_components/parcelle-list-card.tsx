@@ -86,6 +86,12 @@ export function ParcelleListCard({
           <span className="font-sans text-[12.5px] text-text-2">
             {p.quartier}
           </span>
+          {meta.avail && p.interestCount !== undefined && p.interestCount > 0 && (
+            <div className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              {p.interestCount} {p.interestCount > 1 ? "intéressés" : "intéressé"}
+            </div>
+          )}
         </div>
 
         <div className="flex flex-wrap gap-1.5">

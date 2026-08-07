@@ -7,6 +7,7 @@ import { requirePermission, getCurrentUser } from "@/lib/authz";
 import { getScopedPointOfSaleIds, type ScopedUser } from "@/lib/scope";
 import { prisma } from "@/lib/prisma";
 import { ParcelleGallery } from "../_components/parcelle-gallery";
+import { ParcelIntentionsList } from "../_components/parcel-intentions-list";
 
 import { CadastralPreviewMap } from "../_components/cadastral-preview-map-loader";
 
@@ -94,7 +95,12 @@ export default async function ParcelleDetailPage({ params }: PageProps) {
   let totalPaid = 0;
   let totalContractAmount = 0;
 
-  const activeContract = parcelle.reservations?.[0]?.contract;
+  // Sélectionner le contrat actif/validé de la parcelle
+  const activeRes = parcelle.reservations?.find(
+    (r) => r.status === "CONFIRMED" || r.status === "CONVERTED" || r.contract?.status === "ACTIVE"
+  );
+  const activeContract = activeRes?.contract;
+
   if (activeContract) {
     totalContractAmount = Number(activeContract.totalAmount);
     for (const inst of activeContract.installments) {
@@ -137,6 +143,48 @@ export default async function ParcelleDetailPage({ params }: PageProps) {
 
     client = activeContract.user;
   }
+
+  // Récupérer les intentions d'achat en attente (status === PENDING)
+  const pendingReservations = parcelle.reservations.filter((r) => r.status === "PENDING");
+  const intentions = pendingReservations.map((r) => {
+    let tPaid = 0;
+    const c = r.contract;
+    if (c) {
+      for (const inst of c.installments) {
+        for (const pay of inst.payments) {
+          tPaid += Number(pay.amount);
+        }
+      }
+    }
+
+    const tAmount = c ? Number(c.totalAmount) : 0;
+    const durMonths = c ? c.durationMonths : 84;
+    const annualPremium = (tAmount * 12) / durMonths;
+    const threshold2Primes = 2 * annualPremium;
+    const threshold15Percent = 0.15 * tAmount;
+    const isEligible = tPaid >= threshold2Primes || tPaid >= threshold15Percent;
+
+    return {
+      id: r.id,
+      createdAt: r.createdAt.toISOString(),
+      user: {
+        name: r.contract.user.name,
+        email: r.contract.user.email,
+        phone: r.contract.user.phone || "—",
+      },
+      contract: {
+        reference: r.contract.reference,
+        totalAmount: tAmount,
+        installmentAmount: r.contract.installmentAmount ? Number(r.contract.installmentAmount) : 0,
+        periodicity: r.contract.periodicity ?? "MONTHLY",
+        durationMonths: r.contract.durationMonths,
+        verseInit: r.contract.verseInit ? Number(r.contract.verseInit) : 0,
+      },
+      totalPaid: tPaid,
+      isEligible,
+      minRequired: Math.min(threshold2Primes, threshold15Percent),
+    };
+  });
 
   const imagesList = parcelle.images.map((img) => img.path);
 
@@ -359,6 +407,8 @@ export default async function ParcelleDetailPage({ params }: PageProps) {
                 </div>
               </div>
             </div>
+          ) : intentions.length > 0 ? (
+            <ParcelIntentionsList intentions={intentions} />
           ) : (
             /* PLACEHOLDER AND RESERVATION BUTTON */
             <div className="rounded-2xl border border-border bg-surface p-6 shadow-xs text-center space-y-4">

@@ -1,14 +1,13 @@
 import { requireUser } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
-import { ReservationsTable, type ReservationItem } from "./_components/reservations-table";
+import { IntentionsTable, type IntentionItem } from "./_components/intentions-table";
 
-export default async function ReservationsPage() {
+export default async function IntentionsPage() {
   const user = await requireUser();
 
   const dbReservations = await prisma.reservation.findMany({
     where: {
       userId: user.id,
-      status: { in: ["CONFIRMED", "CONVERTED"] },
       deletedAt: null,
     },
     include: {
@@ -22,7 +21,7 @@ export default async function ReservationsPage() {
     orderBy: { createdAt: "desc" },
   });
 
-  const reservations: ReservationItem[] = dbReservations.map((r) => ({
+  const intentions: IntentionItem[] = dbReservations.map((r) => ({
     id: r.id,
     status: r.status,
     createdAt: r.createdAt.toISOString(),
@@ -42,7 +41,7 @@ export default async function ReservationsPage() {
 
   return (
     <div className="p-6 md:p-8">
-      <ReservationsTable initialReservations={reservations} />
+      <IntentionsTable initialIntentions={intentions} />
     </div>
   );
 }

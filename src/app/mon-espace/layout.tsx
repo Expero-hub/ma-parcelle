@@ -9,6 +9,7 @@ const CLIENT_NAV: SidebarModule[] = [
     name: "Mon espace",
     items: [
       { id: "home", name: "Tableau de bord", url: "/mon-espace", icon: "gauge", children: [] },
+      { id: "intentions", name: "Mes intentions d'achat", url: "/mon-espace/intentions", icon: "heart", children: [] },
       { id: "resa", name: "Mes réservations", url: "/mon-espace/reservations", icon: "bookmark", children: [] },
       { id: "contrats", name: "Mes contrats", url: "/mon-espace/contrats", icon: "file-text", children: [] },
       { id: "profil", name: "Mon profil", url: "/mon-espace/profil", icon: "users", children: [] },

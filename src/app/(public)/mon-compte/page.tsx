@@ -22,6 +22,7 @@ export default async function MonComptePage() {
     lastName: user.lastName ?? "",
     phone: user.phone ?? "",
     address: user.address ?? "",
+    birthDate: user.birthDate ? user.birthDate.toISOString().split("T")[0] : "",
     role: user.role ?? "user",
   };
 

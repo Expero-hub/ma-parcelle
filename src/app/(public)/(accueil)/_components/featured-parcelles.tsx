@@ -86,10 +86,16 @@ function FeaturedCard({ p, i }: { p: any; i: number }) {
             <span className="line-clamp-2">{locationStr}</span>
           </div>
 
-          <div className="mt-4 font-sans text-sm text-text-2">
+          <div className="mt-4 flex items-center justify-between font-sans text-sm text-text-2">
             <span className="font-bold">
              {ref}
             </span>
+            {!isReserved && !isSold && p.interestCount !== undefined && p.interestCount > 0 && (
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                {p.interestCount} {p.interestCount > 1 ? "intéressés" : "intéressé"}
+              </span>
+            )}
           </div>
 
           {/* Detail CTA Button */}

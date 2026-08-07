@@ -121,6 +121,10 @@ export async function GET(req: NextRequest) {
               },
             },
           },
+          reservations: {
+            where: { status: "PENDING", deletedAt: null },
+            select: { id: true },
+          },
         },
       }),
       prisma.parcelle.count({ where }),
@@ -161,6 +165,7 @@ export async function GET(req: NextRequest) {
         agencyName: p.pointOfSale?.agency.name ?? "—",
         imageUrl: primaryImage?.path ?? null,
         recoveryRate,
+        interestedCount: p.reservations.length,
       };
     });
 

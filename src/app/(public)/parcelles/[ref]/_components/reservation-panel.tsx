@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useState } from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 
 import { useSession } from "@/lib/auth-client";
 import {
@@ -23,6 +23,7 @@ type Step = "idle" | "form" | "done";
 
 export function ReservationPanel({ p }: ReservationPanelProps) {
   const { data: session } = useSession();
+  const router = useRouter();
   const pathname = usePathname();
   const [step, setStep] = useState<Step>("idle");
   const [loading, setLoading] = useState(false);
@@ -36,7 +37,7 @@ export function ReservationPanel({ p }: ReservationPanelProps) {
 
     if (!session) {
       setErrorMessage(
-        "Vous devez être connecté avec un compte client disposant d'un contrat actif pour réserver cette parcelle.",
+        "Vous devez être connecté avec un compte client pour manifester une intention d'achat pour cette parcelle.",
       );
       return;
     }
@@ -52,17 +53,19 @@ export function ReservationPanel({ p }: ReservationPanelProps) {
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        setErrorMessage(
-          data.message ||
-          "Impossible de faire la réservation. Seuls les clients disposant d'un contrat en cours peuvent réserver.",
-        );
+        if (data.code === "NO_CONTRACT") {
+          // Rediriger vers le wizard de souscription
+          router.push(`/mon-espace/souscription/${p.ref}`);
+          return;
+        }
+        setErrorMessage(data.message || "Impossible de soumettre votre intention d'achat.");
       } else {
         setSuccessMessage(data.message);
         setStep("done");
       }
     } catch (err) {
-      console.error("Erreur réservation:", err);
-      setErrorMessage("Une erreur est survenue lors de la réservation.");
+      console.error("Erreur intention d'achat:", err);
+      setErrorMessage("Une erreur est survenue lors de la soumission de votre demande.");
     } finally {
       setLoading(false);
     }
@@ -89,12 +92,19 @@ export function ReservationPanel({ p }: ReservationPanelProps) {
           <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 font-sans text-xs font-medium text-red-600 dark:text-red-400">
             {errorMessage}
             {!session && (
-              <div className="mt-2">
+              <div className="mt-2 flex gap-3">
                 <Link
                   href={`/connexion?redirect=${encodeURIComponent(pathname)}`}
                   className="font-bold underline text-primary"
                 >
                   Se connecter
+                </Link>
+                <span className="text-text-2">ou</span>
+                <Link
+                  href={`/inscription?redirect=${encodeURIComponent(pathname)}`}
+                  className="font-bold underline text-primary"
+                >
+                  Créer un compte
                 </Link>
               </div>
             )}
@@ -122,7 +132,7 @@ export function ReservationPanel({ p }: ReservationPanelProps) {
             disabled={loading}
             className="w-full cursor-pointer rounded-xl bg-primary p-4 font-sans text-base font-semibold text-on-primary shadow-[var(--shadow)] transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-hover)] disabled:opacity-50"
           >
-            {loading ? "Vérification du contrat..." : "Réserver cette parcelle"}
+            {loading ? "Vérification..." : "Exprimer une intention d'achat"}
           </button>
         ) : (
           <div className="flex animate-[fadeUp_.35s_ease_both] flex-col items-center gap-[10px] border-t border-border pt-4 text-center">

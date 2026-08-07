@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { User, Mail, Phone, Lock, Eye, EyeOff, MapPin, Save, ShieldAlert } from "lucide-react";
-import { updateProfile } from "../actions";
 
 type FormUser = {
   id: string;
@@ -12,6 +11,7 @@ type FormUser = {
   lastName: string;
   phone: string;
   address: string;
+  birthDate: string;
   role: string;
 };
 
@@ -21,6 +21,7 @@ export function ProfileForm({ user }: { user: FormUser }) {
   const [email, setEmail] = useState(user.email);
   const [phone, setPhone] = useState(user.phone);
   const [address, setAddress] = useState(user.address);
+  const [birthDate, setBirthDate] = useState(user.birthDate);
 
   // Password fields
   const [newPassword, setNewPassword] = useState("");
@@ -43,15 +44,25 @@ export function ProfileForm({ user }: { user: FormUser }) {
         throw new Error("Les mots de passe ne correspondent pas.");
       }
 
-      await updateProfile({
-        firstName,
-        lastName,
-        email,
-        phone: phone || null,
-        address: address || null,
-        newPassword: newPassword || null,
-        confirmPassword: confirmPassword || null,
+      const res = await fetch("/api/public/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstName,
+          lastName,
+          email,
+          phone: phone || null,
+          address: address || null,
+          birthDate: birthDate || null,
+          newPassword: newPassword || null,
+          confirmPassword: confirmPassword || null,
+        }),
       });
+
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.message || "Une erreur est survenue lors de la mise à jour.");
+      }
 
       setSuccess("Vos modifications ont été enregistrées avec succès.");
       setNewPassword("");
@@ -128,6 +139,21 @@ export function ProfileForm({ user }: { user: FormUser }) {
                 onChange={(e) => setFirstName(e.target.value)}
                 className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-text focus:outline-none focus:ring-2 focus:ring-primary font-sans text-sm"
                 required
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-text-2 uppercase mb-2" htmlFor="birthDate">
+              Date de naissance
+            </label>
+            <div className="relative">
+              <input
+                id="birthDate"
+                type="date"
+                value={birthDate}
+                onChange={(e) => setBirthDate(e.target.value)}
+                className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-text focus:outline-none focus:ring-2 focus:ring-primary font-sans text-sm"
               />
             </div>
           </div>

@@ -62,6 +62,7 @@ export const auth = betterAuth({
       lastName: { type: "string", required: false },
       phone: { type: "string", required: false },
       address: { type: "string", required: false },
+      birthDate: { type: "date", required: false },
       isValidated: { type: "boolean", required: false, defaultValue: false },
       active: { type: "boolean", required: false, defaultValue: true },
       profileId: { type: "string", required: true },

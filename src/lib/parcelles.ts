@@ -47,6 +47,7 @@ export interface Parcelle {
   tauxActuariel?: number | null;
   fraisGestion?: number | null;
   fraisAcquisition?: number | null;
+  interestCount?: number;
 }
 
 export interface StatutMeta {

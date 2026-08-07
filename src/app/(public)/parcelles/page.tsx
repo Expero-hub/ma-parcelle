@@ -26,6 +26,10 @@ export default async function ParcellesPage() {
           pointOfSale: {
             include: { agency: true },
           },
+          reservations: {
+            where: { status: "PENDING", deletedAt: null },
+            select: { id: true },
+          },
         },
         orderBy: { createdAt: "desc" },
       }),
@@ -105,6 +109,7 @@ export default async function ParcellesPage() {
           plan: "55,50 150,44 158,150 60,158",
           desc: p.description || "Parcelle vérifiée disponible au catalogue.",
           images: p.images.map((img) => img.path),
+          interestCount: p.reservations.length,
         };
       });
     }

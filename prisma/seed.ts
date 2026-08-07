@@ -53,6 +53,7 @@ const MODULES: {
     menus: [
       { name: "Zones", url: "/dashboard/zones", icon: "map", order: 1 },
       { name: "Parcelles", url: "/dashboard/parcelles", icon: "land-plot", order: 2 },
+      { name: "Intentions d'achat", url: "/dashboard/catalogue/intentions", icon: "clipboard-list", order: 3 },
     ],
   },
   {

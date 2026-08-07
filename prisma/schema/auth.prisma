@@ -15,6 +15,7 @@ model User {
   lastName         String?             @map("last_name")
   phone            String?
   address          String?
+  birthDate        DateTime?           @map("birth_date")
   isValidated      Boolean             @default(false) @map("is_validated")
   active           Boolean             @default(true)
   profileId        String              @map("profile_id")
